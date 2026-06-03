@@ -1,0 +1,220 @@
+================================================================================
+PROMPT — FASE 2: CORRECCIÓN DEL PIPELINE ETL (Python)
+Proyecto BI Northwind | Base de Datos Avanzadas
+================================================================================
+
+Eres un Ingeniero de Datos Senior especializado en pipelines ETL con Python.
+Tengo un pipeline ETL funcional para el proyecto BI Northwind que carga datos
+desde SQL Server a una Staging Area, pero tiene dos bugs críticos que impiden
+que las tablas de hechos se carguen correctamente.
+
+Necesito que apliques las correcciones directamente en el código existente.
+
+--------------------------------------------------------------------------------
+ESTRUCTURA DEL PROYECTO
+--------------------------------------------------------------------------------
+El pipeline está en la carpeta northwind_etl/ con estos archivos relevantes:
+
+  etl/transform.py   — Transformaciones de datos (AQUÍ están los bugs)
+  etl/extract.py     — Extracción SQL desde Northwind (AQUÍ falta código)
+  etl/config.py      — Configuración: tablas fuente y mapeo staging
+  etl/load.py        — Carga al staging (secundario, tiene mejora menor)
+  pipeline.py        — Orquestador principal
+
+--------------------------------------------------------------------------------
+BUG CRÍTICO 1 — Type mismatch pd.NA en STG_DiasEntrega y STG_EntregaPuntual
+--------------------------------------------------------------------------------
+Archivo: etl/transform.py — función transform_orders()
+
+CÓDIGO ACTUAL (problemático):
+----------------------------------------------------------------------
+def transform_orders(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    # ...fechas y limpieza...
+
+    # TR-007: días de entrega
+    mask_shipped = out["ShippedDate"].notna()
+    out["STG_DiasEntrega"] = pd.NA                          # ← BUG: dtype object
+    out.loc[mask_shipped, "STG_DiasEntrega"] = (
+        (out.loc[mask_shipped, "ShippedDate"] - out.loc[mask_shipped, "OrderDate"])
+        .dt.days
+    )
+
+    # TR-008: indicador de puntualidad
+    mask_both = mask_shipped & out["RequiredDate"].notna()
+    out["STG_EntregaPuntual"] = pd.NA                       # ← BUG: dtype object
+    out.loc[mask_both, "STG_EntregaPuntual"] = np.where(
+        out.loc[mask_both, "ShippedDate"] <= out.loc[mask_both, "RequiredDate"],
+        1, 0
+    )
+    return out
+----------------------------------------------------------------------
+
+POR QUÉ FALLA:
+  - pd.NA inicializa la columna con dtype=object
+  - np.where() devuelve numpy.int64 para las filas calculadas
+  - La mezcla de pd.NA y numpy.int64 en la misma columna mantiene dtype=object
+  - pyodbc no puede hacer INSERT de una columna object en columnas INT/BIT de SQL Server
+  - Resultado: ERROR en todos los 830 INSERTs de STG_ORDERS
+
+CORRECCIÓN REQUERIDA:
+  Reemplaza el bloque de transform_orders() aplicando estas reglas:
+    - STG_DiasEntrega  → usar None (no pd.NA), castear a pd.Int32Dtype() al final
+    - STG_EntregaPuntual → usar None (no pd.NA), castear a pd.Int8Dtype() al final
+    - Ambos deben usar pandas nullable integer types para que None se serialice
+      como SQL NULL sin romper el tipo
+
+CÓDIGO CORRECTO que debe quedar:
+----------------------------------------------------------------------
+    # TR-007: días de entrega (solo donde ShippedDate no es NULL)
+    mask_shipped = out["ShippedDate"].notna()
+    out["STG_DiasEntrega"] = None
+    out.loc[mask_shipped, "STG_DiasEntrega"] = (
+        (out.loc[mask_shipped, "ShippedDate"] - out.loc[mask_shipped, "OrderDate"])
+        .dt.days
+    )
+    out["STG_DiasEntrega"] = out["STG_DiasEntrega"].astype(pd.Int32Dtype())
+
+    # TR-008: indicador de puntualidad (1=puntual, 0=tarde, NULL=no enviado)
+    mask_both = mask_shipped & out["RequiredDate"].notna()
+    out["STG_EntregaPuntual"] = None
+    out.loc[mask_both, "STG_EntregaPuntual"] = np.where(
+        out.loc[mask_both, "ShippedDate"] <= out.loc[mask_both, "RequiredDate"],
+        1, 0
+    )
+    out["STG_EntregaPuntual"] = out["STG_EntregaPuntual"].astype(pd.Int8Dtype())
+----------------------------------------------------------------------
+
+Aplica este cambio en etl/transform.py, manteniendo el resto de la función
+intacto. No modifiques otras funciones.
+
+--------------------------------------------------------------------------------
+BUG CRÍTICO 2 — Faltan las tablas territoriales en la extracción
+--------------------------------------------------------------------------------
+Archivos: etl/extract.py y etl/config.py
+
+SITUACIÓN ACTUAL:
+  SOURCE_TABLES en config.py contiene solo:
+    ["Categories", "Suppliers", "Shippers", "Customers",
+     "Employees", "Products", "Orders", "Order Details"]
+
+  EXTRACT_QUERIES en extract.py no tiene queries para:
+    - Region
+    - Territories
+    - EmployeeTerritories
+
+  Northwind tiene estas tres tablas que son necesarias para la Pregunta 6
+  (Análisis de territorios) en Power BI.
+
+ESQUEMA DE LAS TABLAS EN NORTHWIND:
+  Region:
+    RegionID    INT         (PK)
+    RegionDescription NCHAR(50)
+
+  Territories:
+    TerritoryID          NVARCHAR(20) (PK)
+    TerritoryDescription NCHAR(50)
+    RegionID             INT          (FK → Region)
+
+  EmployeeTerritories:
+    EmployeeID  INT          (PK, FK → Employees)
+    TerritoryID NVARCHAR(20) (PK, FK → Territories)
+
+CORRECCIONES REQUERIDAS:
+
+  1. En etl/extract.py — agrega estas 3 queries al diccionario EXTRACT_QUERIES:
+
+  "Region": """
+      SELECT
+          RegionID,
+          RTRIM(RegionDescription) AS RegionDescription
+      FROM Region
+  """,
+
+  "Territories": """
+      SELECT
+          TerritoryID,
+          RTRIM(TerritoryDescription) AS TerritoryDescription,
+          RegionID
+      FROM Territories
+  """,
+
+  "EmployeeTerritories": """
+      SELECT
+          EmployeeID,
+          TerritoryID
+      FROM EmployeeTerritories
+  """,
+
+  2. En etl/config.py — agrega las 3 tablas en SOURCE_TABLES y TABLE_MAP:
+
+  SOURCE_TABLES debe quedar:
+    [
+        "Categories",
+        "Suppliers",
+        "Shippers",
+        "Customers",
+        "Employees",
+        "Region",
+        "Territories",
+        "EmployeeTerritories",
+        "Products",
+        "Orders",
+        "Order Details",
+    ]
+  (El orden importa: Region antes de Territories, Territories antes de
+   EmployeeTerritories, por dependencias FK)
+
+  TABLE_MAP debe agregar:
+    "Region":               "STG_REGION",
+    "Territories":          "STG_TERRITORIES",
+    "EmployeeTerritories":  "STG_EMPLOYEE_TERRITORIES",
+
+  3. El mismo TABLE_MAP en etl/load.py también debe actualizarse con las
+     mismas 3 entradas (está duplicado por diseño del código actual).
+
+  4. Crea el DDL SQL para las 3 nuevas tablas en staging. Agrega al archivo
+     sql/create_staging.sql (al final, antes de los índices) las siguientes
+     tablas con la misma estructura y convenciones que las tablas existentes
+     (mismos metadatos STG_LOAD_DATE, STG_SOURCE_NAME, STG_BATCH_ID):
+
+     STG_REGION
+     STG_TERRITORIES
+     STG_EMPLOYEE_TERRITORIES
+
+     Para SQL Server (es el motor real del staging, no MySQL).
+
+--------------------------------------------------------------------------------
+MEJORA MENOR — truncate_staging usa DELETE en lugar de TRUNCATE
+--------------------------------------------------------------------------------
+Archivo: etl/load.py — función truncate_staging()
+
+CÓDIGO ACTUAL:
+  def truncate_staging(engine, table_name: str):
+      with engine.begin() as conn:
+          conn.execute(text(f"DELETE FROM {table_name}"))
+
+CORRECCIÓN:
+  def truncate_staging(engine, table_name: str):
+      with engine.begin() as conn:
+          conn.execute(text(f"TRUNCATE TABLE {table_name}"))
+
+  TRUNCATE TABLE es instantáneo, no registra fila a fila en el log de
+  transacciones y resetea páginas de datos. DELETE es O(n) en el log.
+
+--------------------------------------------------------------------------------
+ENTREGABLES ESPERADOS
+--------------------------------------------------------------------------------
+Entrega los archivos modificados completos:
+  A) etl/transform.py  — con el fix de pd.NA en transform_orders()
+  B) etl/extract.py    — con las 3 queries territoriales añadidas
+  C) etl/config.py     — con SOURCE_TABLES y TABLE_MAP actualizados
+  D) etl/load.py       — con TABLE_MAP actualizado y fix de TRUNCATE
+  E) sql/create_staging.sql — con las 3 nuevas tablas STG al final (SQL Server)
+
+Después de cada cambio explica en una línea qué modificaste y por qué.
+No cambies ninguna otra función ni lógica fuera de lo solicitado.
+
+================================================================================
+FIN DEL PROMPT FASE 2
+================================================================================

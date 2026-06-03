@@ -1,0 +1,29 @@
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+venv/
+.venv/
+
+# ── ETL logs ─────────────────────────────────────────────────────
+*.log
+ETL_Base_ded_datos/**/*.log
+
+# ── Power BI Desktop (cache y configuración local) ───────────────
+**/.pbi/cache.abf
+**/.pbi/localSettings.json
+
+# ── Node / docx build scripts ────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── OS ───────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Temporales Office ────────────────────────────────────────────
+~$*.docx
+~$*.xlsx

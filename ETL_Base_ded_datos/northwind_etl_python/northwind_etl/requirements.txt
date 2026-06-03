@@ -1,0 +1,7 @@
+sqlalchemy>=2.0
+pandas>=2.0
+pymysql>=1.1          # Para MySQL/MariaDB
+psycopg2-binary>=2.9  # Para PostgreSQL (opcional)
+pyodbc>=5.0           # Para SQL Server (opcional)
+openpyxl>=3.1         # Para exportar reportes Excel
+numpy>=1.26

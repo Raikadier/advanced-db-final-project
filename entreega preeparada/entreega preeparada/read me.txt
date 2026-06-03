@@ -1,0 +1,29 @@
+primer se ejecuta 
+Instalar Python 3.x
+python --versión
+
+
+Instalar MongoDB Community Server
+mongosh --versión
+
+Instalar pymongo
+python -m pip install pymongo
+
+
+
+Colocar los archivos en una carpeta
+cd C:\proyecto_bi
+
+Ejecutar script 1 — Crear estructura del DW 
+python northwind_sql_to_mongodb.py
+
+Ejecutar script 2 — Cargar datos reales
+python northwind_sql_to_mongodb.py
+
+lo que se espera en el terminal después de esto:
+MongoDB DW listo en northwind_dw
+
+
+Verificar en MongoDB Compass
+mongodb://localhost:27017
+
