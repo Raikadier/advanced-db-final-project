@@ -1,0 +1,78 @@
+﻿producto_id,product_name,categoria_id,categoria,proveedor_id,proveedor,unit_price,units_in_stock,discontinued,costo_adquisicion
+1,Chai,1,Beverages,1,Desconocido,18.0,39,False,10.8
+2,Chang,1,Beverages,1,Desconocido,19.0,17,False,11.4
+3,Aniseed Syrup,2,Condiments,1,Desconocido,10.0,13,False,6.0
+4,Chef Anton's Cajun Seasoning,2,Condiments,2,Desconocido,22.0,53,False,13.2
+5,Chef Anton's Gumbo Mix,2,Condiments,2,Desconocido,21.35,0,True,12.81
+6,Grandma's Boysenberry Spread,2,Condiments,3,Desconocido,25.0,120,False,15.0
+7,Uncle Bob's Organic Dried Pears,7,Produce,3,Desconocido,30.0,15,False,18.0
+8,Northwoods Cranberry Sauce,2,Condiments,3,Desconocido,40.0,6,False,24.0
+9,Mishi Kobe Niku,6,Meat/Poultry,4,Desconocido,97.0,29,True,58.2
+10,Ikura,8,Seafood,4,Desconocido,31.0,31,False,18.6
+11,Queso Cabrales,4,Dairy Products,5,Desconocido,21.0,22,False,12.6
+12,Queso Manchego La Pastora,4,Dairy Products,5,Desconocido,38.0,86,False,22.8
+13,Konbu,8,Seafood,6,Desconocido,6.0,24,False,3.6
+14,Tofu,7,Produce,6,Desconocido,23.25,35,False,13.95
+15,Genen Shouyu,2,Condiments,6,Desconocido,15.5,39,False,9.3
+16,Pavlova,3,Confections,7,Desconocido,17.45,29,False,10.47
+17,Alice Mutton,6,Meat/Poultry,7,Desconocido,39.0,0,True,23.4
+18,Carnarvon Tigers,8,Seafood,7,Desconocido,62.5,42,False,37.5
+19,Teatime Chocolate Biscuits,3,Confections,8,Desconocido,9.2,25,False,5.52
+20,Sir Rodney's Marmalade,3,Confections,8,Desconocido,81.0,40,False,48.6
+21,Sir Rodney's Scones,3,Confections,8,Desconocido,10.0,3,False,6.0
+22,Gustaf's Knäckebröd,5,Grains/Cereals,9,PB Knäckebröd AB,21.0,104,False,12.6
+23,Tunnbröd,5,Grains/Cereals,9,PB Knäckebröd AB,9.0,61,False,5.4
+24,Guaraná Fantástica,1,Beverages,10,Desconocido,4.5,20,True,2.7
+25,NuNuCa Nuß-Nougat-Creme,3,Confections,11,Desconocido,14.0,76,False,8.4
+26,Gumbär Gummibärchen,3,Confections,11,Desconocido,31.23,15,False,18.74
+27,Schoggi Schokolade,3,Confections,11,Desconocido,43.9,49,False,26.34
+28,Rössle Sauerkraut,7,Produce,12,Desconocido,45.6,26,True,27.36
+29,Thüringer Rostbratwurst,6,Meat/Poultry,12,Desconocido,123.79,0,True,74.27
+30,Nord-Ost Matjeshering,8,Seafood,13,Desconocido,25.89,10,False,15.53
+31,Gorgonzola Telino,4,Dairy Products,14,Desconocido,12.5,0,False,7.5
+32,Mascarpone Fabioli,4,Dairy Products,14,Desconocido,32.0,9,False,19.2
+33,Geitost,4,Dairy Products,15,Desconocido,2.5,112,False,1.5
+34,Sasquatch Ale,1,Beverages,16,Desconocido,14.0,111,False,8.4
+35,Steeleye Stout,1,Beverages,16,Desconocido,18.0,20,False,10.8
+36,Inlagd Sill,8,Seafood,17,Svensk Sjöföda AB,19.0,112,False,11.4
+37,Gravad lax,8,Seafood,17,Svensk Sjöföda AB,26.0,11,False,15.6
+38,Côte de Blaye,1,Beverages,18,Desconocido,263.5,17,False,158.1
+39,Chartreuse verte,1,Beverages,18,Desconocido,18.0,69,False,10.8
+40,Boston Crab Meat,8,Seafood,19,Desconocido,18.4,123,False,11.04
+41,Jack's New England Clam Chowder,8,Seafood,19,Desconocido,9.65,85,False,5.79
+42,Singaporean Hokkien Fried Mee,5,Grains/Cereals,20,Leka Trading,14.0,26,True,8.4
+43,Ipoh Coffee,1,Beverages,20,Leka Trading,46.0,17,False,27.6
+44,Gula Malacca,2,Condiments,20,Leka Trading,19.45,27,False,11.67
+45,Rogede sild,8,Seafood,21,Lyngbysild,9.5,5,False,5.7
+46,Spegesild,8,Seafood,21,Lyngbysild,12.0,95,False,7.2
+47,Zaanse koeken,3,Confections,22,Desconocido,9.5,36,False,5.7
+48,Chocolade,3,Confections,22,Desconocido,12.75,15,False,7.65
+49,Maxilaku,3,Confections,23,Desconocido,20.0,10,False,12.0
+50,Valkoinen suklaa,3,Confections,23,Desconocido,16.25,65,False,9.75
+51,Manjimup Dried Apples,7,Produce,24,Desconocido,53.0,20,False,31.8
+52,Filo Mix,5,Grains/Cereals,24,Desconocido,7.0,38,False,4.2
+53,Perth Pasties,6,Meat/Poultry,24,Desconocido,32.8,0,True,19.68
+54,Tourtière,6,Meat/Poultry,25,Desconocido,7.45,21,False,4.47
+55,Pâté chinois,6,Meat/Poultry,25,Desconocido,24.0,115,False,14.4
+56,Gnocchi di nonna Alice,5,Grains/Cereals,26,Desconocido,38.0,21,False,22.8
+57,Ravioli Angelo,5,Grains/Cereals,26,Desconocido,19.5,36,False,11.7
+58,Escargots de Bourgogne,8,Seafood,27,Escargots Nouveaux,13.25,62,False,7.95
+59,Raclette Courdavault,4,Dairy Products,28,Gai pâturage,55.0,79,False,33.0
+60,Camembert Pierrot,4,Dairy Products,28,Gai pâturage,34.0,19,False,20.4
+61,Sirop d'érable,2,Condiments,29,Desconocido,28.5,113,False,17.1
+62,Tarte au sucre,3,Confections,29,Desconocido,49.3,17,False,29.58
+63,Vegie-spread,2,Condiments,7,Desconocido,43.9,24,False,26.34
+64,Wimmers gute Semmelknödel,5,Grains/Cereals,12,Desconocido,33.25,22,False,19.95
+65,Louisiana Fiery Hot Pepper Sauce,2,Condiments,2,Desconocido,21.05,76,False,12.63
+66,Louisiana Hot Spiced Okra,2,Condiments,2,Desconocido,17.0,4,False,10.2
+67,Laughing Lumberjack Lager,1,Beverages,16,Desconocido,14.0,52,False,8.4
+68,Scottish Longbreads,3,Confections,8,Desconocido,12.5,6,False,7.5
+69,Gudbrandsdalsost,4,Dairy Products,15,Desconocido,36.0,26,False,21.6
+70,Outback Lager,1,Beverages,7,Desconocido,15.0,15,False,9.0
+71,Flotemysost,4,Dairy Products,15,Desconocido,21.5,26,False,12.9
+72,Mozzarella di Giovanni,4,Dairy Products,14,Desconocido,34.8,14,False,20.88
+73,Röd Kaviar,8,Seafood,17,Svensk Sjöföda AB,15.0,101,False,9.0
+74,Longlife Tofu,7,Produce,4,Desconocido,10.0,4,False,6.0
+75,Rhönbräu Klosterbier,1,Beverages,12,Desconocido,7.75,125,False,4.65
+76,Lakkalikööri,1,Beverages,23,Desconocido,18.0,57,False,10.8
+77,Original Frankfurter grüne Soße,2,Condiments,12,Desconocido,13.0,32,False,7.8

@@ -1,0 +1,70 @@
+﻿territorio_id,city,region,country,continente,zona
+GER-BE,Berlin,,Germany,Europa,Europa Occidental
+MEX-MÉ,México D.F.,,Mexico,América,Latinoamérica
+UK-LO,London,,UK,Europa,Europa Occidental
+SWE-LU,Luleå,,Sweden,Europa,Europa del Norte
+GER-MA,Mannheim,,Germany,Europa,Europa Occidental
+FRA-ST,Strasbourg,,France,Europa,Europa Occidental
+SPA-MA,Madrid,,Spain,Europa,Europa Occidental
+FRA-MA,Marseille,,France,Europa,Europa Occidental
+CAN-TS,Tsawassen,BC,Canada,América,Norteamérica
+ARG-BU,Buenos Aires,,Argentina,América,Latinoamérica
+SWI-BE,Bern,,Switzerland,Europa,Europa Central
+BRA-SA,Sao Paulo,SP,Brazil,América,Latinoamérica
+GER-AA,Aachen,,Germany,Europa,Europa Occidental
+FRA-NA,Nantes,,France,Europa,Europa Occidental
+AUS-GR,Graz,,Austria,Europa,Europa Central
+FRA-LI,Lille,,France,Europa,Europa Occidental
+SWE-BR,Bräcke,,Sweden,Europa,Europa del Norte
+GER-MÜ,München,,Germany,Europa,Europa Occidental
+ITA-TO,Torino,,Italy,Europa,Europa Occidental
+POR-LI,Lisboa,,Portugal,Europa,Europa Occidental
+SPA-BA,Barcelona,,Spain,Europa,Europa Occidental
+SPA-SE,Sevilla,,Spain,Europa,Europa Occidental
+BRA-CA,Campinas,SP,Brazil,América,Latinoamérica
+USA-EU,Eugene,OR,USA,América,Norteamérica
+VEN-CA,Caracas,DF,Venezuela,América,Latinoamérica
+BRA-RI,Rio de Janeiro,RJ,Brazil,América,Latinoamérica
+VEN-SA,San Cristóbal,Táchira,Venezuela,América,Latinoamérica
+USA-EL,Elgin,OR,USA,América,Norteamérica
+IRE-CO,Cork,Co. Cork,Ireland,Europa,Europa Occidental
+UK-CO,Cowes,Isle of Wight,UK,Europa,Europa Occidental
+GER-BR,Brandenburg,,Germany,Europa,Europa Occidental
+FRA-VE,Versailles,,France,Europa,Europa Occidental
+FRA-TO,Toulouse,,France,Europa,Europa Occidental
+CAN-VA,Vancouver,BC,Canada,América,Norteamérica
+USA-WA,Walla Walla,WA,USA,América,Norteamérica
+GER-FR,Frankfurt a.M.,,Germany,Europa,Europa Occidental
+USA-SA,San Francisco,CA,USA,América,Norteamérica
+VEN-BA,Barquisimeto,Lara,Venezuela,América,Latinoamérica
+VEN-I.,I. de Margarita,Nueva Esparta,Venezuela,América,Latinoamérica
+USA-PO,Portland,OR,USA,América,Norteamérica
+ITA-BE,Bergamo,,Italy,Europa,Europa Occidental
+BEL-BR,Bruxelles,,Belgium,Europa,Europa Occidental
+CAN-MO,Montréal,Québec,Canada,América,Norteamérica
+GER-LE,Leipzig,,Germany,Europa,Europa Occidental
+USA-AN,Anchorage,AK,USA,América,Norteamérica
+GER-KÖ,Köln,,Germany,Europa,Europa Occidental
+FRA-PA,Paris,,France,Europa,Europa Occidental
+AUS-SA,Salzburg,,Austria,Europa,Europa Central
+GER-CU,Cunewalde,,Germany,Europa,Europa Occidental
+USA-AL,Albuquerque,NM,USA,América,Norteamérica
+ITA-RE,Reggio Emilia,,Italy,Europa,Europa Occidental
+SWI-GE,Genève,,Switzerland,Europa,Europa Central
+NOR-ST,Stavern,,Norway,Europa,Europa del Norte
+USA-BO,Boise,ID,USA,América,Norteamérica
+DEN-KO,Kobenhavn,,Denmark,Europa,Europa del Norte
+USA-LA,Lander,WY,USA,América,Norteamérica
+BEL-CH,Charleroi,,Belgium,Europa,Europa Occidental
+USA-BU,Butte,MT,USA,América,Norteamérica
+GER-MÜ-1,Münster,,Germany,Europa,Europa Occidental
+USA-KI,Kirkland,WA,USA,América,Norteamérica
+DEN-ÅR,Århus,,Denmark,Europa,Europa del Norte
+FRA-LY,Lyon,,France,Europa,Europa Occidental
+FRA-RE,Reims,,France,Europa,Europa Occidental
+GER-ST,Stuttgart,,Germany,Europa,Europa Occidental
+FIN-OU,Oulu,,Finland,Europa,Europa del Norte
+BRA-RE,Resende,SP,Brazil,América,Latinoamérica
+USA-SE,Seattle,WA,USA,América,Norteamérica
+FIN-HE,Helsinki,,Finland,Europa,Europa del Norte
+POL-WA,Warszawa,,Poland,Europa,Europa del Este
