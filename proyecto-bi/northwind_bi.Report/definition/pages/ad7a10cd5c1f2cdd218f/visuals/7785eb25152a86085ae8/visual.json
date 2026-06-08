@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
   "name": "7785eb25152a86085ae8",
   "position": {
     "x": 1070,
@@ -65,19 +65,6 @@
           }
         }
       ],
-      "selection": [
-        {
-          "properties": {
-            "strictSingleSelect": {
-              "expr": {
-                "Literal": {
-                  "Value": "true"
-                }
-              }
-            }
-          }
-        }
-      ],
       "items": [
         {
           "properties": {
@@ -126,12 +113,6 @@
         }
       ]
     },
-    "syncGroup": {
-      "groupName": "dim_fecha.trimestre",
-      "fieldChanges": true,
-      "filterChanges": true
-    },
-    "drillFilterOtherVisuals": true,
     "visualContainerObjects": {
       "title": [
         {
@@ -160,6 +141,11 @@
           }
         }
       ]
+    },
+    "syncGroup": {
+      "groupName": "dim_fecha.trimestre",
+      "fieldChanges": true,
+      "filterChanges": false
     }
   },
   "filterConfig": {

@@ -1,6 +1,6 @@
 /// ============================================================
 /// DIMENSIÓN: dim_empleado
-/// Fuente: Northwind.Employees (9 registros)
+/// Fuente: MongoDB Atlas SQL → northwind_dw.dim_empleado (9 registros)
 /// Responde: P5 (eficiencia vendedores), P6 (territorios)
 /// ============================================================
 table dim_empleado
@@ -40,13 +40,6 @@ table dim_empleado
 		summarizeBy: none
 		sourceColumn: title
 
-	column title_of_courtesy
-		dataType: string
-		isHidden
-		lineageTag: 01cdb9bf-a865-4de7-8026-04948f7f6fca
-		summarizeBy: none
-		sourceColumn: title_of_courtesy
-
 	column hire_date
 		dataType: dateTime
 		isHidden
@@ -80,31 +73,31 @@ table dim_empleado
 		summarizeBy: none
 		sourceColumn: reports_to
 
+	column _id
+		dataType: string
+		lineageTag: 0eb9af8e-95c4-4fae-94b9-fb3d02903bda
+		summarizeBy: none
+		sourceColumn: _id
+
+		annotation SummarizationSetBy = Automatic
+
 	partition dim_empleado-m = m
 		mode: import
 		source =
 				let
-				    Source    = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
-				    Empleados = Source{[Schema="dbo", Item="Employees"]}[Data],
-				    Sel = Table.SelectColumns(Empleados, {
-				        "EmployeeID", "LastName", "FirstName", "Title",
-				        "TitleOfCourtesy", "HireDate", "City", "Region",
-				        "Country", "ReportsTo"
-				    }),
-				    Renamed = Table.RenameColumns(Sel, {
-				        {"EmployeeID",       "empleado_id"},
-				        {"LastName",         "last_name"},
-				        {"FirstName",        "first_name"},
-				        {"Title",            "title"},
-				        {"TitleOfCourtesy",  "title_of_courtesy"},
-				        {"HireDate",         "hire_date"},
-				        {"City",             "city"},
-				        {"Region",           "region"},
-				        {"Country",          "country"},
-				        {"ReportsTo",        "reports_to"}
-				    }),
-				    FullName = Table.AddColumn(Renamed, "full_name",
-				        each [first_name] & " " & [last_name], type text)
+				  Origen = MongoDBAtlasODBC.Contents("mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin", "northwind_dw", []),
+				  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+				  #"Navegación 2" = #"Navegación 1"{[Name = "dim_empleado", Kind = "Table"]}[Data],
+				  #"Tipo cambiado" = Table.TransformColumnTypes(#"Navegación 2", {
+				    {"empleado_id", Int64.Type}, {"last_name", type text}, {"first_name", type text},
+				    {"full_name", type text}, {"title", type text}, {"hire_date", type datetime},
+				    {"city", type text}, {"region", type text}, {"country", type text},
+				    {"reports_to", Int64.Type}, {"_id", type text}
+				  })
 				in
-				    FullName
+				  #"Tipo cambiado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
 

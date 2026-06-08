@@ -1,6 +1,6 @@
 /// ============================================================
 /// TABLA DE HECHOS: fact_ventas
-/// Fuente: Orders JOIN Order Details — ~2155 registros
+/// Fuente: MongoDB Atlas SQL → northwind_dw.fact_ventas (~2155 registros)
 /// Granularidad: 1 fila = 1 línea de detalle de pedido
 /// Responde: P1 a P10 (todas las preguntas)
 /// ============================================================
@@ -190,104 +190,35 @@ table fact_ventas
 		summarizeBy: none
 		sourceColumn: entrega_puntual
 
+	column _id
+		dataType: string
+		lineageTag: db0a68b3-24f2-457c-ac15-0519dc18ca08
+		summarizeBy: none
+		sourceColumn: _id
+
+		annotation SummarizationSetBy = Automatic
+
 	partition fact_ventas-m = m
 		mode: import
 		source =
 				let
-				    Source      = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
-				    Orders      = Source{[Schema="dbo", Item="Orders"]}[Data],
-				    OrderDetails= Source{[Schema="dbo", Item="Order Details"]}[Data],
-				    OrdSel = Table.SelectColumns(Orders, {
-				        "OrderID", "CustomerID", "EmployeeID",
-				        "OrderDate", "RequiredDate", "ShippedDate",
-				        "ShipVia", "Freight", "ShipCountry", "ShipRegion"
-				    }),
-				    ODSel = Table.SelectColumns(OrderDetails, {
-				        "OrderID", "ProductID", "UnitPrice", "Quantity", "Discount"
-				    }),
-				    Joined = Table.NestedJoin(
-				        ODSel, "OrderID",
-				        OrdSel, "OrderID",
-				        "OrdData", JoinKind.Inner
-				    ),
-				    Exp = Table.ExpandTableColumn(Joined, "OrdData", {
-				        "CustomerID", "EmployeeID", "OrderDate", "RequiredDate",
-				        "ShippedDate", "ShipVia", "Freight", "ShipCountry", "ShipRegion"
-				    }),
-				    Subtotal    = Table.AddColumn(Exp, "subtotal",
-				        each [UnitPrice] * [Quantity], type number),
-				    TotalVenta  = Table.AddColumn(Subtotal, "total_venta",
-				        each [subtotal] * (1 - [Discount]), type number),
-				    CostoUnit   = Table.AddColumn(TotalVenta, "costo_adquisicion_unit",
-				        each [UnitPrice] * 0.60, type number),
-				    CostoTotal  = Table.AddColumn(CostoUnit, "costo_total",
-				        each [costo_adquisicion_unit] * [Quantity], type number),
-				    Margen      = Table.AddColumn(CostoTotal, "margen",
-				        each [total_venta] - [costo_total], type number),
-				    MargenPct   = Table.AddColumn(Margen, "margen_pct",
-				        each if [total_venta] = 0 then 0 else [margen] / [total_venta] * 100, type number),
-				    DiasEntrega = Table.AddColumn(MargenPct, "dias_entrega",
-				        each if [ShippedDate] = null then null
-				             else Duration.Days([ShippedDate] - [OrderDate]),
-				        type number),
-				    EntPuntual  = Table.AddColumn(DiasEntrega, "entrega_puntual",
-				        each if [ShippedDate] = null then null
-				             else [ShippedDate] <= [RequiredDate],
-				        type logical),
-				    FechaId     = Table.AddColumn(EntPuntual, "fecha_id",
-				        each if [OrderDate] = null then null
-				             else Date.ToText([OrderDate], "yyyyMMdd"),
-				        type text),
-				    FechaEntId  = Table.AddColumn(FechaId, "fecha_entrega_id",
-				        each if [ShippedDate] = null then null
-				             else Date.ToText([ShippedDate], "yyyyMMdd"),
-				        type text),
-				    DetailId    = Table.AddColumn(FechaEntId, "order_detail_id",
-				        each Text.From([OrderID]) & "-" & Text.From([ProductID]),
-				        type text),
-				    ShipCntry   = Table.AddColumn(DetailId, "ship_country_safe",
-				        each if [ShipCountry] = null then "UNK" else [ShipCountry],
-				        type text),
-				    ShipReg     = Table.AddColumn(ShipCntry, "ship_region_safe",
-				        each if [ShipRegion] = null then "XX" else [ShipRegion],
-				        type text),
-				    TerrId      = Table.AddColumn(ShipReg, "territorio_id",
-				        each Text.Upper(Text.Start([ship_country_safe], 3)) & "-" &
-				             Text.Upper(Text.Start([ship_region_safe], 2)),
-				        type text),
-				    Round2 = Table.TransformColumns(TerrId, {
-				        {"subtotal",    each Number.Round(_, 2), type number},
-				        {"total_venta", each Number.Round(_, 2), type number},
-				        {"costo_total", each Number.Round(_, 2), type number},
-				        {"margen",      each Number.Round(_, 2), type number},
-				        {"margen_pct",  each Number.Round(_, 2), type number},
-				        {"Freight",     each Number.Round(_, 2), type number}
-				    }),
-				    Final = Table.RenameColumns(Round2, {
-				        {"OrderID",     "order_id"},
-				        {"CustomerID",  "cliente_id"},
-				        {"EmployeeID",  "empleado_id"},
-				        {"ProductID",   "producto_id"},
-				        {"ShipVia",     "shipper_id"},
-				        {"UnitPrice",   "unit_price"},
-				        {"Quantity",    "cantidad"},
-				        {"Discount",    "descuento"},
-				        {"Freight",     "freight"},
-				        {"OrderDate",   "order_date"},
-				        {"RequiredDate","required_date"},
-				        {"ShippedDate", "shipped_date"}
-				    }),
-				    Columnas = Table.SelectColumns(Final, {
-				        "order_detail_id", "order_id",
-				        "fecha_id", "fecha_entrega_id",
-				        "cliente_id", "empleado_id", "producto_id",
-				        "shipper_id", "territorio_id",
-				        "cantidad", "unit_price", "descuento", "freight",
-				        "subtotal", "total_venta",
-				        "costo_total", "margen", "margen_pct",
-				        "order_date", "required_date", "shipped_date",
-				        "dias_entrega", "entrega_puntual"
-				    })
+				  Origen = MongoDBAtlasODBC.Contents("mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin", "northwind_dw", []),
+				  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+				  #"Navegación 2" = #"Navegación 1"{[Name = "fact_ventas", Kind = "Table"]}[Data],
+				  #"Tipo cambiado" = Table.TransformColumnTypes(#"Navegación 2", {
+				    {"order_detail_id", type text}, {"order_id", Int64.Type}, {"fecha_id", type text},
+				    {"fecha_entrega_id", type text}, {"cliente_id", type text}, {"empleado_id", Int64.Type},
+				    {"producto_id", Int64.Type}, {"shipper_id", Int64.Type}, {"territorio_id", type text},
+				    {"cantidad", Int64.Type}, {"unit_price", type number}, {"descuento", type number},
+				    {"freight", type number}, {"subtotal", type number}, {"total_venta", type number},
+				    {"costo_total", type number}, {"margen", type number}, {"margen_pct", type number},
+				    {"order_date", type datetime}, {"required_date", type datetime}, {"shipped_date", type datetime},
+				    {"dias_entrega", Int64.Type}, {"entrega_puntual", type logical}, {"_id", type text}
+				  })
 				in
-				    Columnas
+				  #"Tipo cambiado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
 

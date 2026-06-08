@@ -1,11 +1,12 @@
 /// ============================================================
 /// DIMENSIÓN: dim_fecha
-/// Fuente: csvs/dim_fecha.csv (672 días Jul 1996 → May 1998)
+/// Fuente: MongoDB Atlas SQL → northwind_dw.dim_fecha (672 días Jul 1996 → May 1998)
 /// Responde: P1 (ventas por periodo), P10 (estacionalidad)
 /// ============================================================
 table dim_fecha
 	isHidden
 	lineageTag: cba37add-12ec-4a28-a5b1-1f42629f5611
+	dataCategory: Time
 
 	column fecha_id
 		dataType: string
@@ -71,6 +72,14 @@ table dim_fecha
 		summarizeBy: none
 		sourceColumn: es_fin_semana
 
+	column _id
+		dataType: string
+		lineageTag: 2790b6bd-4bb1-44c5-8a50-a4adeefc5d9b
+		summarizeBy: none
+		sourceColumn: _id
+
+		annotation SummarizationSetBy = Automatic
+
 	hierarchy 'Jerarquía Temporal'
 		lineageTag: 07e2d991-88ad-4f1a-9296-409efc544337
 
@@ -94,21 +103,19 @@ table dim_fecha
 		mode: import
 		source =
 				let
-				    Source  = Csv.Document(File.Contents("D:\\Github repos\\advanced-db-final-project\\csvs\\dim_fecha.csv"),
-				                [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.None]),
-				    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
-				    Typed   = Table.TransformColumnTypes(Headers, {
-				        {"fecha_id",    type text},
-				        {"fecha_completa", type date},
-				        {"anio",        Int64.Type},
-				        {"trimestre",   Int64.Type},
-				        {"mes",         Int64.Type},
-				        {"nombre_mes",  type text},
-				        {"semana_anio", Int64.Type},
-				        {"dia",         Int64.Type},
-				        {"nombre_dia",  type text},
-				        {"es_fin_semana", type logical}
-				    })
+				  Origen = MongoDBAtlasODBC.Contents("mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin", "northwind_dw", []),
+				  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+				  #"Navegación 2" = #"Navegación 1"{[Name = "dim_fecha", Kind = "Table"]}[Data],
+				  #"Tipo cambiado" = Table.TransformColumnTypes(#"Navegación 2", {
+				    {"fecha_id", type text}, {"fecha_completa", type datetime}, {"anio", Int64.Type},
+				    {"trimestre", Int64.Type}, {"mes", Int64.Type}, {"nombre_mes", type text},
+				    {"semana_anio", Int64.Type}, {"dia", Int64.Type}, {"nombre_dia", type text},
+				    {"es_fin_semana", type logical}, {"_id", type text}
+				  })
 				in
-				    Typed
+				  #"Tipo cambiado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
 

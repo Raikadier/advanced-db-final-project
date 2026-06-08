@@ -1,6 +1,6 @@
 /// ============================================================
 /// DIMENSIÓN: dim_territorio
-/// Fuente: ShipCountry único de Orders + mapa de zonas
+/// Fuente: MongoDB Atlas SQL → northwind_dw.dim_territorio
 /// Responde: P6 (análisis territorial), P7 (entrega por región)
 /// ============================================================
 table dim_territorio
@@ -39,6 +39,22 @@ table dim_territorio
 		summarizeBy: none
 		sourceColumn: zona
 
+	column _id
+		dataType: string
+		lineageTag: df918077-0503-4f29-848c-649fae317d37
+		summarizeBy: none
+		sourceColumn: _id
+
+		annotation SummarizationSetBy = Automatic
+
+	column city
+		dataType: string
+		lineageTag: e2f938c3-b686-46f4-af22-c860009994c4
+		summarizeBy: none
+		sourceColumn: city
+
+		annotation SummarizationSetBy = Automatic
+
 	hierarchy 'Jerarquía Territorial'
 		lineageTag: 2aae7728-2f02-40e8-8b30-a02be4e7b051
 
@@ -58,22 +74,17 @@ table dim_territorio
 		mode: import
 		source =
 				let
-				    Source  = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
-				    Orders  = Source{[Schema="dbo", Item="Orders"]}[Data],
-				    Sel     = Table.SelectColumns(Orders, {"ShipCountry", "ShipRegion"}),
-				    Unique  = Table.Distinct(Sel),
-				    WithId  = Table.AddColumn(Unique, "territorio_id",
-				        each Text.Upper(Text.Start([ShipCountry], 3)) & "-" &
-				             Text.Upper(Text.Start(
-				                 if [ShipRegion] = null then "XX" else [ShipRegion],
-				                 2)),
-				        type text),
-				    WithZone = Table.AddColumn(WithId, "zona", each "Ver dashboard", type text),
-				    WithCont = Table.AddColumn(WithZone, "continente", each "Ver dashboard", type text),
-				    Renamed = Table.RenameColumns(WithCont, {
-				        {"ShipCountry", "country"},
-				        {"ShipRegion",  "region"}
-				    })
+				  Origen = MongoDBAtlasODBC.Contents("mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin", "northwind_dw", []),
+				  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+				  #"Navegación 2" = #"Navegación 1"{[Name = "dim_territorio", Kind = "Table"]}[Data],
+				  #"Tipo cambiado" = Table.TransformColumnTypes(#"Navegación 2", {
+				    {"territorio_id", type text}, {"country", type text}, {"region", type text},
+				    {"continente", type text}, {"zona", type text}, {"_id", type text}, {"city", type text}
+				  })
 				in
-				    Renamed
+				  #"Tipo cambiado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
 

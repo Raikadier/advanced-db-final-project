@@ -2,6 +2,7 @@ model Model
 	culture: es-CO
 	defaultPowerBIDataSourceVersion: powerBI_V3
 	sourceQueryCulture: en-US
+	maxParallelismPerRefresh: 1
 	dataAccessOptions
 		legacyRedirects
 		returnErrorValuesAsNull
@@ -9,6 +10,8 @@ model Model
 annotation __PBI_TimeIntelligenceEnabled = 1
 
 annotation PBI_ProTooling = ["DevMode"]
+
+annotation PBI_QueryOrder = ["dim_fecha","dim_cliente","dim_empleado","dim_producto","dim_shipper","dim_territorio","dim_metas_empleado","fact_ventas","MongoDB Atlas URI","MongoDB Database"]
 
 ref table dim_fecha
 ref table dim_cliente

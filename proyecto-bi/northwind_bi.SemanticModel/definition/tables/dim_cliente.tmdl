@@ -1,6 +1,6 @@
 /// ============================================================
 /// DIMENSIÓN: dim_cliente
-/// Fuente: Northwind.Customers (91 registros, 21 países)
+/// Fuente: MongoDB Atlas SQL → northwind_dw.dim_cliente (91 registros, 21 países)
 /// Responde: P2 (clientes rentables), P6 (geografía), P9 (inactivos)
 /// ============================================================
 table dim_cliente
@@ -82,6 +82,41 @@ table dim_cliente
 		summarizeBy: none
 		sourceColumn: fax
 
+	column _id
+		dataType: string
+		lineageTag: 3c8edfc9-3a81-4f75-8001-cdf3a6f52b67
+		summarizeBy: none
+		sourceColumn: _id
+
+		annotation SummarizationSetBy = Automatic
+
+	column n_ordenes
+		dataType: int64
+		formatString: 0
+		lineageTag: 2da9ca4e-3e08-4f29-9908-a7dabfb22964
+		summarizeBy: none
+		sourceColumn: n_ordenes
+
+		annotation SummarizationSetBy = Automatic
+
+	column segmento_cliente
+		dataType: string
+		lineageTag: 63fdf8da-ef88-4aa3-9690-c02b87f67a33
+		summarizeBy: none
+		sourceColumn: segmento_cliente
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_ventas_usd
+		dataType: double
+		lineageTag: 284e77b9-1eb3-45af-8c16-3bfab04b1c0e
+		summarizeBy: none
+		sourceColumn: total_ventas_usd
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
 	hierarchy 'Jerarquía Geográfica Cliente'
 		lineageTag: 4f70b033-64a0-49a4-a9fd-e39f5c9692a2
 
@@ -101,26 +136,20 @@ table dim_cliente
 		mode: import
 		source =
 				let
-				    Source   = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
-				    Clientes = Source{[Schema="dbo", Item="Customers"]}[Data],
-				    Sel = Table.SelectColumns(Clientes, {
-				        "CustomerID", "CompanyName", "ContactName", "ContactTitle",
-				        "Address", "City", "Region", "PostalCode", "Country",
-				        "Phone", "Fax"
-				    }),
-				    Renamed = Table.RenameColumns(Sel, {
-				        {"CustomerID",   "cliente_id"},
-				        {"CompanyName",  "company_name"},
-				        {"ContactName",  "contact_name"},
-				        {"ContactTitle", "contact_title"},
-				        {"Address",      "address"},
-				        {"City",         "city"},
-				        {"Region",       "region"},
-				        {"PostalCode",   "postal_code"},
-				        {"Country",      "country"},
-				        {"Phone",        "phone"},
-				        {"Fax",          "fax"}
-				    })
+				  Origen = MongoDBAtlasODBC.Contents("mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin", "northwind_dw", []),
+				  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+				  #"Navegación 2" = #"Navegación 1"{[Name = "dim_cliente", Kind = "Table"]}[Data],
+				  #"Tipo cambiado" = Table.TransformColumnTypes(#"Navegación 2", {
+				    {"cliente_id", type text}, {"company_name", type text}, {"contact_name", type text},
+				    {"contact_title", type text}, {"city", type text}, {"region", type text},
+				    {"country", type text}, {"address", type text}, {"postal_code", type text},
+				    {"phone", type text}, {"fax", type text}, {"_id", type text},
+				    {"n_ordenes", Int64.Type}, {"segmento_cliente", type text}, {"total_ventas_usd", type number}
+				  })
 				in
-				    Renamed
+				  #"Tipo cambiado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
 

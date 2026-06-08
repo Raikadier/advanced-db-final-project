@@ -1,6 +1,6 @@
 /// ============================================================
 /// DIMENSIÓN: dim_producto
-/// Fuente: Products + Categories (77 productos, 8 categorías)
+/// Fuente: MongoDB Atlas SQL → northwind_dw.dim_producto (77 productos, 8 categorías)
 /// Responde: P3 (más vendidos), P4 (por categoría), P8 (margen)
 /// ============================================================
 table dim_producto
@@ -40,13 +40,6 @@ table dim_producto
 		lineageTag: 03a5de65-8866-408c-a98e-1feb5005716b
 		summarizeBy: none
 		sourceColumn: proveedor_id
-
-	column quantity_per_unit
-		dataType: string
-		isHidden
-		lineageTag: 7f05a7f7-ebc3-49ea-947c-ff47468f8d0c
-		summarizeBy: none
-		sourceColumn: quantity_per_unit
 
 	column unit_price
 		dataType: double
@@ -88,6 +81,22 @@ table dim_producto
 		summarizeBy: none
 		sourceColumn: discontinued
 
+	column _id
+		dataType: string
+		lineageTag: bf974d6d-97f8-4d3e-9793-bfc43e028369
+		summarizeBy: none
+		sourceColumn: _id
+
+		annotation SummarizationSetBy = Automatic
+
+	column proveedor
+		dataType: string
+		lineageTag: b7d6e032-b886-4667-8146-872daf8a3fd1
+		summarizeBy: none
+		sourceColumn: proveedor
+
+		annotation SummarizationSetBy = Automatic
+
 	hierarchy 'Jerarquía Producto'
 		lineageTag: 76c58772-c34e-438a-8f5d-865d608336d1
 
@@ -103,36 +112,20 @@ table dim_producto
 		mode: import
 		source =
 				let
-				    Source     = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
-				    Products   = Source{[Schema="dbo", Item="Products"]}[Data],
-				    Categories = Source{[Schema="dbo", Item="Categories"]}[Data],
-				    CatSel = Table.SelectColumns(Categories, {"CategoryID", "CategoryName"}),
-				    Joined = Table.NestedJoin(
-				        Products, "CategoryID",
-				        CatSel,   "CategoryID",
-				        "CatData", JoinKind.LeftOuter
-				    ),
-				    Expanded = Table.ExpandTableColumn(Joined, "CatData", {"CategoryName"}),
-				    Sel = Table.SelectColumns(Expanded, {
-				        "ProductID", "ProductName", "CategoryID", "CategoryName",
-				        "SupplierID", "QuantityPerUnit", "UnitPrice",
-				        "UnitsInStock", "UnitsOnOrder", "ReorderLevel", "Discontinued"
-				    }),
-				    CostoAdq = Table.AddColumn(Sel, "costo_adquisicion",
-				        each [UnitPrice] * 0.60, type number),
-				    Renamed = Table.RenameColumns(CostoAdq, {
-				        {"ProductID",       "producto_id"},
-				        {"ProductName",     "product_name"},
-				        {"CategoryID",      "categoria_id"},
-				        {"CategoryName",    "categoria"},
-				        {"SupplierID",      "proveedor_id"},
-				        {"QuantityPerUnit", "quantity_per_unit"},
-				        {"UnitPrice",       "unit_price"},
-				        {"UnitsInStock",    "units_in_stock"},
-				        {"UnitsOnOrder",    "units_on_order"},
-				        {"ReorderLevel",    "reorder_level"},
-				        {"Discontinued",    "discontinued"}
-				    })
+				  Origen = MongoDBAtlasODBC.Contents("mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin", "northwind_dw", []),
+				  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+				  #"Navegación 2" = #"Navegación 1"{[Name = "dim_producto", Kind = "Table"]}[Data],
+				  #"Tipo cambiado" = Table.TransformColumnTypes(#"Navegación 2", {
+				    {"producto_id", Int64.Type}, {"product_name", type text}, {"categoria_id", Int64.Type},
+				    {"categoria", type text}, {"proveedor_id", Int64.Type}, {"unit_price", type number},
+				    {"costo_adquisicion", type number}, {"units_in_stock", Int64.Type},
+				    {"units_on_order", Int64.Type}, {"reorder_level", Int64.Type},
+				    {"discontinued", type logical}, {"_id", type text}, {"proveedor", type text}
+				  })
 				in
-				    Renamed
+				  #"Tipo cambiado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
 

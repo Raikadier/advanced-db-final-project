@@ -1,0 +1,12 @@
+/// Parámetros de conexión MongoDB Atlas SQL (sin credenciales en la URI).
+/// Copiar URI desde Atlas → Connect → Atlas SQL → Power BI Connector.
+expression 'MongoDB Atlas URI' = "mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin"
+	lineageTag: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+	annotation PBI_ResultType = Text
+
+expression 'MongoDB Database' = "northwind_dw"
+	lineageTag: b2c3d4e5-f6a7-8901-bcde-f12345678901
+
+	annotation PBI_ResultType = Text
+

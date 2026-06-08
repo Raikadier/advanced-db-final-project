@@ -27,3 +27,17 @@ relationship fv_territorio
 	fromColumn: fact_ventas.territorio_id
 	toColumn: dim_territorio.territorio_id
 
+relationship AutoDetected_ae819aaa-bcce-46d1-8220-b0a88b81c84e
+	isActive: false
+	fromColumn: dim_cliente.city
+	toColumn: dim_territorio.city
+
+relationship AutoDetected_2d721764-c0ec-42f9-b101-63a4fd68e65f
+	isActive: false
+	fromColumn: dim_empleado.city
+	toColumn: dim_territorio.city
+
+relationship metas_empleado
+	fromColumn: dim_metas_empleado.empleado_id
+	toColumn: dim_empleado.empleado_id
+

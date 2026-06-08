@@ -31,6 +31,7 @@
 - [Stack tecnológico](#stack-tecnológico)
 
 ### Configuración paso a paso
+- [Guía de configuración desde cero](#guía-de-configuración-desde-cero) ← **empezar aquí**
 - [Supabase — Proyecto fuente (`northwind-oltp`)](#supabase--proyecto-fuente-northwind-oltp)
 - [Supabase — Proyecto staging (`northwind-staging`)](#supabase--proyecto-staging-northwind-staging)
 - [MongoDB Atlas — Data Warehouse](#mongodb-atlas--data-warehouse)
@@ -75,12 +76,16 @@
 - [Diseño de visualizaciones](#diseño-de-visualizaciones)
 
 ### Power BI
+- [Power BI — Conexión a MongoDB Atlas SQL](#power-bi--conexión-a-mongodb-atlas-sql)
+- [Power BI — Validación de vistas y medidas](#power-bi--validación-de-vistas-y-medidas)
 - [Proyecto PBIP / TMDL / PBIR](#proyecto-pbip--tmdl--pbir)
 - [Páginas del reporte](#páginas-del-reporte)
 
 ### Operación y respaldo
 - [Plan B — CSV sin infraestructura](#plan-b--csv-sin-infraestructura)
+- [Guía de estudio (documento dedicado)](docs/GUIA_ESTUDIO.md) ← **material para sustentación**
 - [Estructura del repositorio](#estructura-del-repositorio)
+- [Guía de configuración desde cero](#guía-de-configuración-desde-cero)
 - [Guía de ejecución rápida](#guía-de-ejecución-rápida)
 - [Errores corregidos (auditoría)](#errores-corregidos-auditoría)
 - [Punto extra — Tabular SSAS](#punto-extra--tabular-ssas)
@@ -204,7 +209,9 @@ Documento vivo: cada decisión relevante se registra aquí con fecha y motivo.
 | 2026-06 | **Carga incremental (`watermark`)** | Optimización futura para volúmenes grandes | 📋 Planeado |
 | 2026-06 | **Plan B: `generate_csvs.py`** | Sustentación sin depender de red o servicios cloud | ✅ Disponible |
 | 2026-06 | **Power BI en Import Mode** | MongoDB no soporta DirectQuery nativo en PBI; Import + refresh programado | ✅ Acordado |
+| 2026-06 | **Power BI vía MongoDB Atlas SQL + ODBC** | Conector integrado actual (no “MongoDB” legacy); requiere Data Federation en Atlas | ✅ Documentado |
 | 2026-06 | **MCP Supabase en Cursor** (`supabase-oltp` + `supabase-staging`) | Migraciones y DDL asistidas por IA | 🔄 Configurado en `mcp.json` |
+| 2026-06 | **Scripts PBIR para filtros slicer** (`audit_fix_report_filters.py`) | Corrige reporte en blanco por selecciones guardadas en segmentadores | ✅ Implementado |
 
 *Para añadir una decisión: agregar fila a esta tabla en el mismo PR/commit que implemente el cambio.*
 
@@ -323,7 +330,9 @@ print('fact_ventas:', db.fact_ventas.count_documents({}))
 
 ### Power BI y Atlas
 
-Power BI consume el DW en **modo Import** (refresh manual o programado). No se usa `mongosqld`/ODBC de la arquitectura Docker del compañero — ese patrón es para MongoDB **local**.
+Power BI consume el DW en **modo Import** (refresh manual o programado) mediante el conector **MongoDB Atlas SQL** (no el conector legacy “MongoDB” ni `mongosqld` local).
+
+> Guía paso a paso, errores frecuentes y patrón Power Query: [Power BI — Conexión a MongoDB Atlas SQL](#power-bi--conexión-a-mongodb-atlas-sql).
 
 ---
 
@@ -489,7 +498,7 @@ No es ELT puro (donde la transformación ocurre dentro del motor del DW), porque
 
 1. Cumple el requisito académico de **motor NoSQL** en la capa analítica.
 2. El modelo documental encaja bien con dimensiones desnormalizadas (`dim_cliente` con `segmento_cliente` ya calculado).
-3. Power BI puede consumirlo vía conector MongoDB en modo Import.
+3. Power BI puede consumirlo vía conector **MongoDB Atlas SQL** + ODBC en modo Import.
 
 ### Estrategia de carga: full refresh
 
@@ -1607,20 +1616,298 @@ Wireframes detallados en sección original del README (§13 histórico) — ver 
 
 ---
 
+## Power BI — Conexión a MongoDB Atlas SQL
+
+Esta sección documenta cómo llenar las **8 tablas del modelo PBIP** con los datos del DW en MongoDB Atlas (`northwind_dw`), incluyendo problemas reales encontrados en la integración (ODBC, navegación Power Query, claves duplicadas).
+
+### Dos conexiones distintas a Atlas (no confundir)
+
+| Uso | Protocolo | URI típica | ¿Necesita Atlas SQL / Data Federation? |
+|-----|-----------|------------|----------------------------------------|
+| **ETL Python** (`pymongo`, `_check_env.py`) | Driver nativo MongoDB | `mongodb+srv://...@cluster....mongodb.net/` | **No** |
+| **Power BI Desktop** | Atlas SQL + ODBC | `mongodb://atlas-sql-....query.mongodb.net/...` | **Sí** |
+
+Que `_check_env.py` responda `Mongo ping: OK` **no garantiza** que Power BI funcione: son endpoints diferentes.
+
+### Requisitos previos en Atlas
+
+1. Cluster con datos cargados por el ETL (`python pipeline.py`).
+2. **Data Federation / Atlas SQL** habilitado:
+   - Atlas → **Database → Clusters → Connect → Atlas SQL → Quick Start → Create**
+   - Debe aparecer una instancia tipo **Cluster0 Atlas SQL** en **Services → Data Federation**.
+3. **Database Access**: usuario con lectura (ej. `etl_northwind`).
+4. **Network Access**: IP del PC de desarrollo autorizada.
+
+### Requisitos previos en el PC (Power BI)
+
+| Componente | Obligatorio | Notas |
+|------------|-------------|-------|
+| **Power BI Desktop** 64 bits | Sí | Conector integrado **MongoDB Atlas SQL** (no “MongoDB” legacy) |
+| **MongoDB Atlas SQL ODBC Driver** 64 bits | Sí | [Descarga](https://www.mongodb.com/try/download/odbc-driver). Verificar en `odbcad32.exe` → pestaña Controladores |
+| Conector `.pqx` opcional de MongoDB | No | El de Power BI Desktop suele bastar |
+
+### Mapa tabla Power BI ↔ colección Mongo
+
+| Tabla en el modelo | Colección en `northwind_dw` | Filas aprox. |
+|--------------------|----------------------------|--------------|
+| `dim_fecha` | `dim_fecha` | ~672 |
+| `dim_cliente` | `dim_cliente` | ~91 |
+| `dim_empleado` | `dim_empleado` | ~9 |
+| `dim_producto` | `dim_producto` | ~77 |
+| `dim_shipper` | `dim_shipper` | ~3 |
+| `dim_territorio` | `dim_territorio` | ~69 |
+| `dim_metas_empleado` | `dim_metas_empleado` | ~108 |
+| `fact_ventas` | `fact_ventas` | ~2.155 |
+
+Las consultas viven en `proyecto-bi/northwind_bi.SemanticModel/definition/tables/*.tmdl`. Los parámetros de conexión están en `expressions.tmdl`:
+
+- `MongoDB Atlas URI` — endpoint Atlas SQL (**sin** usuario ni contraseña en la URI)
+- `MongoDB Database` — `northwind_dw`
+
+Copiar la URI desde Atlas → **Data Federation → Cluster0 Atlas SQL → Connect → Power BI Connector**.
+
+### Flujo correcto con el PBIP existente (recomendado)
+
+El proyecto **ya tiene** las 8 tablas, relaciones y medidas DAX. **No** volver a usar **Obtener datos** para importar tablas nuevas (eso crea duplicados `dim_cliente (2)`, etc.).
+
+```
+1. Cerrar Power BI sin guardar (si hay consultas duplicadas o rotas)
+2. Abrir proyecto-bi/northwind_bi.pbip
+3. Archivo → Opciones → Configuración de origen de datos
+   → MongoDB Atlas SQL → credenciales Atlas (etl_northwind + contraseña)
+4. Transformar datos → Administrar parámetros
+   → verificar MongoDB Atlas URI y MongoDB Database
+5. Archivo → Opciones → Carga de datos (archivo actual)
+   → desmarcar "Carga en paralelo de tablas" (recomendado con ODBC)
+6. Inicio → Actualizar
+7. Validar conteos y medidas DAX ([Total Ventas], etc.)
+```
+
+**Modo de conectividad:** siempre **Importar** (no DirectQuery).
+
+### Patrón Power Query M (3 pasos de navegación)
+
+Cada tabla debe **bajar hasta su colección**. Solo el paso `Contents` devuelve la lista de bases (`northwind_dw`, `sample_mflix`, `test`) — eso **no** son los datos.
+
+Ejemplo para `dim_cliente` (plantilla para las 8 tablas):
+
+```powerquery
+let
+  Origen = MongoDBAtlasODBC.Contents(
+      "mongodb://atlas-sql-....query.mongodb.net/northwind_dw?ssl=true&authSource=admin",
+      "northwind_dw",
+      []
+  ),
+  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+  #"Navegación 2" = #"Navegación 1"{[Name = "dim_cliente", Kind = "Table"]}[Data]
+in
+  #"Navegación 2"
+```
+
+Cambiar solo el nombre en el último paso (`dim_fecha`, `fact_ventas`, etc.).
+
+Equivalente en TMDL (sin pasos renombrados por la UI):
+
+```powerquery
+let
+    Source   = MongoDBAtlasODBC.Contents(#"MongoDB Atlas URI", #"MongoDB Database"),
+    Database = Source{[Name=#"MongoDB Database", Kind="Database"]}[Data],
+    Table    = Database{[Name="dim_cliente", Kind="Table"]}[Data]
+in
+    Table
+```
+
+**Si la consulta solo tiene `Origen = Contents(...)`**, verás bases de datos en la vista previa, no filas de clientes — hay que añadir los pasos 2 y 3 (o copiar el M de una consulta que ya funcione).
+
+### Caso especial: `dim_metas_empleado`
+
+En Mongo la granularidad es **`empleado_id + anio + trimestre`** (108 filas: 9 empleados × 3 años × 4 trimestres). `empleado_id` **no es único** (el valor `1` aparece 12 veces).
+
+- **No** marcar `empleado_id` como clave única (`isKey`) en el modelo.
+- Las medidas DAX (`[Meta Periodo]`, etc.) filtran por los tres campos vía `CALCULATE`, sin relación directa a esta tabla.
+
+### Qué NO hacer
+
+| Acción | Por qué evitarla |
+|--------|------------------|
+| **Obtener datos → Mongo** con tablas ya en el modelo | Crea duplicados `(2)` y rompe relaciones |
+| Borrar tablas del modelo y renombrar `(2)` | Pierdes jerarquías, formatos y metadatos TMDL |
+| Usar URI `mongodb+srv://` del `.env` en Power BI | Es para el ETL, no para Atlas SQL |
+| Marcar solo `northwind_dw` en el navegador y Cargar | Carga la base, no cada colección |
+| Usar CSV en `csvs/` (raíz) | Ruta incorrecta; el Plan B válido es `plan-b/csvs/` |
+
+### Errores frecuentes y soluciones
+
+| Error | Causa probable | Solución |
+|-------|----------------|----------|
+| `Missing client library` | ODBC Driver no instalado | Instalar MongoDB Atlas SQL ODBC **64 bits**; reiniciar Power BI |
+| `SQL_DRIVER_ODBC_VER: 03.80` | Fallo genérico de conexión ODBC | Reinstalar driver; credenciales; URI de Atlas SQL; IP en Network Access |
+| `4 argumentos... espera 2 y 3` | Firma antigua de `Contents` | Usar `Contents(uri, db)` o `Contents(uri, db, [])` según versión |
+| Vista previa muestra `northwind_dw`, `test`… | Consulta incompleta (solo paso 1) | Añadir navegación Database → Table |
+| Duplicado en `empleado_id` (`dim_metas_empleado`) | `isKey` en columna no única | Quitar clave de `empleado_id` (ya corregido en TMDL) |
+| `HRESULT 0x80040E4E` | Timeout ODBC / carga paralela | Desactivar carga en paralelo; actualizar tabla por tabla |
+| `La carga se canceló... tabla anterior` | Efecto dominó | Arreglar la primera tabla que falla en la lista |
+| Pide LocalDB o CSV | Consultas viejas sin reemplazar | Editor avanzado → patrón M de Atlas SQL en las 8 consultas |
+
+### Checklist de verificación post-refresh
+
+```
+□ _check_env.py → Mongo ping OK, 8 colecciones
+□ Power Query: 8 consultas sin sufijo (2)
+□ Cada consulta termina en Kind = "Table" de su colección
+□ fact_ventas ≈ 2.155 filas, dim_cliente ≈ 91
+□ [Total Ventas] devuelve valor (~$1.26M)
+□ 4 páginas del reporte muestran datos
+```
+
+### Plan B — si ODBC no coopera a tiempo
+
+Los CSV en `plan-b/csvs/` tienen la misma estructura dimensional. Editar las consultas existentes para leer CSV (no crear tablas nuevas). Ver [Plan B — CSV sin infraestructura](#plan-b--csv-sin-infraestructura).
+
+---
+
+## Power BI — Validación de vistas y medidas
+
+Las tablas pueden cargar datos correctamente y, aun así, las **páginas del reporte** mostrar `(En blanco)` en KPIs, segmentaciones de `anio` vacías y gráficos sin barras. Eso indica un problema de **modelo semántico** (tipos, relaciones o filtros), no de ausencia de datos en Mongo.
+
+### Síntomas observados (jun 2026)
+
+| Síntoma en el reporte | Páginas afectadas |
+|----------------------|-------------------|
+| KPIs `[Total Ventas]`, `[Num Ordenes]`, etc. = `(En blanco)` | Resumen Ejecutivo |
+| Segmentación `anio` = `(En blanco)` | Todas |
+| Tablas con nombres de cliente/producto pero medidas vacías | Clientes, Productos |
+| Mapas y gráficos sin datos | Clientes, Operaciones |
+
+### Diagnóstico paso a paso
+
+#### 1. Confirmar que hay filas en las tablas (no solo en Power Query)
+
+**Vista de datos** en Power BI:
+
+| Tabla | Comprobar |
+|-------|-----------|
+| `fact_ventas` | ~2.155 filas; `total_venta` con números (no texto) |
+| `dim_fecha` | ~672 filas; `anio` = 1996, 1997, 1998 |
+| `dim_cliente` | ~91 filas |
+
+Si aquí hay datos pero las medidas fallan → seguir con pasos 2–5.
+
+#### 2. Corregir tipos de datos (causa más frecuente con ODBC)
+
+Atlas SQL a veces importa números y fechas como **Texto**. Sin tipos correctos, `SUM()` devuelve blanco.
+
+> **En el repo:** las 8 tablas TMDL ya incluyen `Table.TransformColumnTypes` en la partición M (corrección F4-11). Tras abrir el `.pbip`, **Cerrar y aplicar** debe aplicar esos tipos. Si Power BI conservó M local antiguo, cerrar sin guardar y reabrir el proyecto.
+
+Si aún falla, en **Transformar datos** añadir manualmente **Transformar tipo de columna** (o paso M `Table.TransformColumnTypes`):
+
+**`fact_ventas`** (mínimo):
+
+```powerquery
+Table.TransformColumnTypes(#"Navegación 2", {
+    {"order_id", Int64.Type}, {"empleado_id", Int64.Type}, {"producto_id", Int64.Type},
+    {"shipper_id", Int64.Type}, {"cantidad", Int64.Type},
+    {"unit_price", type number}, {"descuento", type number}, {"freight", type number},
+    {"subtotal", type number}, {"total_venta", type number},
+    {"costo_total", type number}, {"margen", type number}, {"margen_pct", type number},
+    {"order_date", type datetime}, {"required_date", type datetime}, {"shipped_date", type datetime},
+    {"dias_entrega", Int64.Type}, {"entrega_puntual", type logical}
+})
+```
+
+**`dim_fecha`** (crítico para segmentaciones `anio` / `trimestre`):
+
+```powerquery
+Table.TransformColumnTypes(#"Navegación 2", {
+    {"fecha_id", type text},
+    {"fecha_completa", type datetime},
+    {"anio", Int64.Type},
+    {"trimestre", Int64.Type},
+    {"mes", Int64.Type},
+    {"es_fin_semana", type logical}
+})
+```
+
+Repetir lógica similar en dimensiones (`cliente_id` = texto, IDs numéricos = Entero, etc.).
+
+#### 3. Verificar relaciones en Vista de modelo
+
+Deben existir **7 relaciones activas** desde `fact_ventas`:
+
+| Desde | Hacia | Columna |
+|-------|-------|---------|
+| `fact_ventas` | `dim_fecha` | `fecha_id` |
+| `fact_ventas` | `dim_cliente` | `cliente_id` |
+| `fact_ventas` | `dim_empleado` | `empleado_id` |
+| `fact_ventas` | `dim_producto` | `producto_id` |
+| `fact_ventas` | `dim_shipper` | `shipper_id` |
+| `fact_ventas` | `dim_territorio` | `territorio_id` |
+
+- Sin iconos de advertencia (tipos incompatibles).
+- Cardinalidad: muchos a uno (*:1) desde hechos hacia dimensiones.
+- `dim_metas_empleado` **no** tiene relación directa (las medidas P5 filtran con DAX).
+
+Si una relación está rota: revisar que `fecha_id` y `cliente_id` sean **mismo tipo** en hechos y dimensiones (texto `YYYYMMDD` y texto respectivamente).
+
+#### 4. Marcar tabla de fechas
+
+**Vista de modelo** → `dim_fecha` → clic derecho → **Marcar como tabla de fechas** → columna `fecha_completa`.
+
+Necesario para `[Ventas YTD]`, `[Ventas Año Anterior]` y segmentaciones temporales.
+
+#### 5. Limpiar filtros del reporte
+
+Las capturas muestran segmentaciones en `(En blanco)` que **filtran todo el reporte**:
+
+1. Pestaña **Vista** → **Limpiar todas las segmentaciones** (o en cada página resetear `anio`, `trimestre`, `zona` a **Todas**).
+2. Volver a probar una tarjeta con `[Total Ventas]`.
+
+#### 6. Prueba rápida de medidas
+
+Crear una tarjeta temporal:
+
+```dax
+Total Ventas Test = SUM(fact_ventas[total_venta])
+```
+
+| Resultado | Interpretación |
+|-----------|----------------|
+| ~$1.265.793 | Datos y tipos OK; el problema son filtros o campos del visual |
+| (En blanco) | `total_venta` no es numérico o `fact_ventas` vacía en el modelo |
+| Error DAX | Relación o columna renombrada |
+
+### Resultado esperado por página (cuando el modelo está bien)
+
+| Página | Contenido esperado |
+|--------|-------------------|
+| **Resumen Ejecutivo** | KPIs con totales; línea mensual; matriz trimestral |
+| **Clientes y Geografía** | Top 10 clientes; mapa con países; tabla con ventas por cliente |
+| **Operaciones y Logística** | Top productos; donut por categoría; gauges de entrega |
+| **Desempeño y Auditoría** | Barras ventas vs meta; scatter rentabilidad |
+
+Métricas de referencia: **2.155** líneas de hecho · **~$1.265.793** ventas totales · **~31,3 %** margen global.
+
+---
+
 ## Proyecto PBIP / TMDL / PBIR
 
 ```
 proyecto-bi/
 ├── northwind_bi.pbip
 ├── northwind_bi.SemanticModel/   ← TMDL, compatibilityLevel 1600
+│   └── definition/
+│       ├── expressions.tmdl      ← parámetros MongoDB Atlas URI / Database
+│       ├── relationships.tmdl
+│       └── tables/*.tmdl         ← 8 tablas + _Medidas
 └── northwind_bi.Report/          ← PBIR, 4 páginas
 ```
 
 ### Abrir en Power BI Desktop
 
-1. File → Open → `proyecto-bi/northwind_bi.pbip`
-2. Actualizar datos (según fuente configurada en `model.tmdl`)
-3. Guardar
+1. **Archivo → Abrir** → `proyecto-bi/northwind_bi.pbip`
+2. Configurar credenciales Atlas SQL (primera vez). Ver [guía de conexión](#power-bi--conexión-a-mongodb-atlas-sql).
+3. **Inicio → Actualizar** (no volver a **Obtener datos** si las 8 tablas ya existen)
+4. Guardar
 
 > **Import Mode:** tras actualizar, los datos quedan embebidos; la sustentación puede funcionar offline si se refrescó antes.
 
@@ -1628,18 +1915,20 @@ proyecto-bi/
 
 ## Páginas del reporte
 
-| Página | GUID | Preguntas |
-|--------|------|-----------|
-| Resumen Ejecutivo | `e3e43335c708953e4407` | P1 + P10 |
-| Clientes y Geografía | `d72257249741148631d0` | P2 + P6 + P9 |
-| Operaciones y Logística | `d9ff3d19e960c247b7bd` | P3 + P4 + P7 |
-| Desempeño y Auditoría | `ad7a10cd5c1f2cdd218f` | P5 + P8 |
+| Página | GUID | Preguntas | Visuales principales |
+|--------|------|-----------|----------------------|
+| Resumen Ejecutivo | `e3e43335c708953e4407` | P1 + P10 | KPIs, línea mensual, matriz trimestral |
+| Clientes y Geografía | `d72257249741148631d0` | P2 + P6 + P9 | Top 10 clientes, mapa Azure, tabla inactivos |
+| Operaciones y Logística | `d9ff3d19e960c247b7bd` | P3 + P4 + P7 | Top productos, donut categorías, gauges entrega |
+| Desempeño y Auditoría | `ad7a10cd5c1f2cdd218f` | P5 + P8 | Ventas vs meta, scatter rentabilidad |
+
+Tras cargar datos desde Mongo, validar que las páginas no muestren `(En blanco)` en medidas ni segmentaciones `anio`. Ver [Validación de vistas y medidas](#power-bi--validación-de-vistas-y-medidas).
 
 ---
 
 ## Plan B — CSV sin infraestructura
 
-Si falla la red o los servicios cloud en la sustentación:
+Si falla la red, los servicios cloud o el **ODBC de Atlas SQL** en la sustentación:
 
 ```bash
 cd plan-b/
@@ -1660,33 +1949,169 @@ advanced-db-final-project/
 ├── Trabajo Final Base de Datos Avanzadas.pdf
 ├── .env.example                   # Plantilla credenciales (copiar a .env)
 ├── README.md                      # Documentación central (incl. guía ETL)
+├── docs/
+│   └── GUIA_ESTUDIO.md            # Guía de estudio y sustentación
 ├── etl/                           # Pipeline Python (OLTP → staging → DW)
 │   ├── pipeline.py
 │   ├── sql/                       # DDL Supabase
 │   └── etl/                       # Módulos Python del paquete
+├── scripts/                       # Mantenimiento PBIR (filtros slicer)
+│   ├── audit_fix_report_filters.py
+│   └── fix_slicer_null_filters.py
 ├── plan-b/                        # CSV de respaldo para Power BI
 │   ├── csvs/
 │   ├── generate_csvs.py
 │   └── verify_csvs.py
-└── proyecto-bi/                   # Power BI PBIP
+└── proyecto-bi/                   # Power BI PBIP (ver proyecto-bi/README.md)
+```
+
+---
+
+## Guía de configuración desde cero
+
+Guía para que **cualquier persona** clone el repositorio, configure la infraestructura, ejecute el ETL y abra el reporte Power BI con datos del DW.
+
+### Requisitos de software
+
+| Herramienta | Versión | Uso |
+|-------------|---------|-----|
+| **Python** | 3.10+ | ETL |
+| **Git** | Cualquier reciente | Clonar repo |
+| **Cuenta Supabase** | 2 proyectos | OLTP + Staging |
+| **Cuenta MongoDB Atlas** | Cluster M0+ | Data Warehouse |
+| **Power BI Desktop** | 64 bits, actualizado | Reporte `.pbip` |
+| **MongoDB Atlas SQL ODBC Driver** | 64 bits | Conexión Power BI → Atlas |
+
+### Paso 0 — Clonar el repositorio
+
+```bash
+git clone https://github.com/Raikadier/advanced-db-final-project.git
+cd advanced-db-final-project
+```
+
+### Paso 1 — Variables de entorno
+
+```bash
+copy .env.example .env    # Windows
+# cp .env.example .env    # Linux/macOS
+```
+
+Completar en `.env` (raíz del repo, **no** dentro de `etl/`):
+
+| Variable | Dónde obtenerla |
+|----------|-----------------|
+| `SOURCE_DATABASE_URL` | Supabase → northwind-oltp → Connect → URI pooler :5432 |
+| `STAGING_DATABASE_URL` | Supabase → northwind-staging → Connect → URI pooler :5432 |
+| `MONGO_URI` | Atlas → Connect → Drivers → Python → `mongodb+srv://...` |
+| `MONGO_DB` | `northwind_dw` |
+
+Ver [Variables de entorno](#variables-de-entorno-env).
+
+### Paso 2 — Supabase OLTP (fuente Northwind)
+
+1. Crear proyecto `northwind-oltp` en Supabase.
+2. SQL Editor → ejecutar `etl/sql/northwind_oltp_supabase.sql`.
+3. Verificar ~11 tablas (`Customers`, `Orders`, `Products`, etc.).
+
+Detalle: [Supabase — Proyecto fuente](#supabase--proyecto-fuente-northwind-oltp).
+
+### Paso 3 — Supabase Staging
+
+1. Crear proyecto `northwind-staging`.
+2. El DDL de staging se aplica automáticamente en la primera ejecución del ETL (`bootstrap.py`).
+3. Guardar `STAGING_DATABASE_URL` en `.env`.
+
+Detalle: [Supabase — Proyecto staging](#supabase--proyecto-staging-northwind-staging).
+
+### Paso 4 — MongoDB Atlas (DW)
+
+1. Crear cluster Atlas (M0 Free suele bastar).
+2. **Database Access** → usuario `etl_northwind` (read/write).
+3. **Network Access** → IP del PC de desarrollo.
+4. Guardar `MONGO_URI` y `MONGO_DB=northwind_dw` en `.env`.
+
+Detalle: [MongoDB Atlas — Data Warehouse](#mongodb-atlas--data-warehouse).
+
+### Paso 5 — Ejecutar el ETL
+
+```bash
+cd etl/
+pip install -r requirements.txt
+python _check_env.py          # diagnóstico: OLTP, Staging, Mongo deben responder OK
+python pipeline.py            # ciclo completo → staging + Mongo DW
+```
+
+Tras éxito: 8 colecciones en `northwind_dw`, `fact_ventas` ≈ 2.155 documentos.
+
+### Paso 6 — Atlas SQL para Power BI
+
+1. Atlas → **Clusters → Connect → Atlas SQL → Quick Start → Create**.
+2. Verificar instancia en **Services → Data Federation** (ej. `Cluster0 Atlas SQL`).
+3. **Connect → Power BI Connector** → copiar URI y database `northwind_dw`.
+
+### Paso 7 — ODBC Driver en Windows
+
+1. Descargar [MongoDB Atlas SQL ODBC Driver](https://www.mongodb.com/try/download/odbc-driver) (**Windows x64**).
+2. Instalar (PowerShell como administrador si hace falta).
+3. Verificar: `Win+R` → `odbcad32.exe` → pestaña **Controladores**.
+
+### Paso 8 — Abrir Power BI y cargar datos
+
+1. Instalar [Power BI Desktop](https://powerbi.microsoft.com/desktop/) si no está instalado.
+2. Abrir `proyecto-bi/northwind_bi.pbip`.
+3. Seguir [Power BI — Conexión a MongoDB Atlas SQL](#power-bi--conexión-a-mongodb-atlas-sql):
+   - Credenciales Atlas en **Configuración de origen de datos**.
+   - Parámetros `MongoDB Atlas URI` y `MongoDB Database`.
+   - Consultas M con 3 pasos de navegación por tabla.
+   - **Importar** (no DirectQuery).
+   - Desactivar carga en paralelo (recomendado).
+4. **Inicio → Actualizar**.
+
+### Paso 9 — Validar modelo y vistas
+
+1. Comprobar conteos de tablas (ver [checklist post-refresh](#checklist-de-verificación-post-refresh)).
+2. Si las páginas muestran `(En blanco)`: seguir [Power BI — Validación de vistas y medidas](#power-bi--validación-de-vistas-y-medidas).
+3. Guardar el `.pbip`.
+
+### Paso 10 — Plan B (sin Atlas SQL / ODBC)
+
+Si el paso 8 falla de forma persistente:
+
+```bash
+cd plan-b/
+python verify_csvs.py
+```
+
+Reconfigurar consultas Power Query para leer `plan-b/csvs/*.csv`. Ver [Plan B](#plan-b--csv-sin-infraestructura).
+
+### Diagrama del flujo completo
+
+```
+git clone → .env → Supabase OLTP + Staging → Atlas cluster
+    → python pipeline.py → northwind_dw (8 colecciones)
+    → Atlas SQL + ODBC → northwind_bi.pbip → Actualizar
+    → Validar medidas y 4 páginas del reporte
 ```
 
 ---
 
 ## Guía de ejecución rápida
 
+Para quien **ya tiene** infraestructura configurada:
+
 ```bash
-# 1. Copiar .env.example → .env (raíz del repo) y completar URLs
-# 2. Una vez: ejecutar northwind_oltp_supabase.sql en Supabase OLTP
-# 3. ETL completo (bootstrap staging + Fase A + Fase B)
+# 1. .env completo en la raíz del repo
+# 2. ETL
 cd etl/
 pip install -r requirements.txt
 python pipeline.py
 
-# 4. Abrir proyecto-bi/northwind_bi.pbip y refrescar contra Atlas
+# 3. Power BI
+# Abrir proyecto-bi/northwind_bi.pbip → Actualizar
+# Si vistas en blanco → ver "Validación de vistas y medidas"
 ```
 
-Ver detalle en [ETL — Ejecución y automatización](#etl--ejecución-y-automatización).
+Guías completas: [Configuración desde cero](#guía-de-configuración-desde-cero) · [Conexión Atlas SQL](#power-bi--conexión-a-mongodb-atlas-sql) · [Validación vistas](#power-bi--validación-de-vistas-y-medidas).
 
 ---
 
@@ -1700,8 +2125,12 @@ Ver detalle en [ETL — Ejecución y automatización](#etl--ejecución-y-automat
 | F3-01 | MongoDB | CRÍTICO | Lee staging real, no regex sobre `.sql` |
 | F3-02 | MongoDB | CRÍTICO | Eliminados datos sintéticos con `random()` |
 | F4-01–08 | TMDL | SINTAXIS | Correcciones de formato TMDL y relaciones |
+| F4-09 | Power BI | CRÍTICO | `dim_metas_empleado`: quitado `isKey` de `empleado_id` (granularidad trimestral en Mongo) |
+| F4-10 | Power BI | ALTO | Migración fuentes LocalDB/CSV → MongoDB Atlas SQL; patrón M con 3 pasos de navegación |
+| F4-11 | Power BI | CRÍTICO | `TransformColumnTypes` en 8 tablas TMDL (ODBC importaba números/fechas como texto) |
+| F4-12 | PBIR | CRÍTICO | Slicers con filtros guardados/sincronizados vaciaban el reporte (*flash then blank*); corregido con `scripts/audit_fix_report_filters.py` |
 
-Detalle en `Reporte_Errores_Corregidos.docx`.
+Detalle ampliado en [docs/GUIA_ESTUDIO.md](docs/GUIA_ESTUDIO.md). Referencia histórica: `Reporte_Errores_Corregidos.docx`.
 
 ---
 
@@ -1724,18 +2153,19 @@ Documentación: [TMDL overview](https://learn.microsoft.com/en-us/analysis-servi
 | Supabase OLTP / Staging | ✅ | Conexiones OK; 3.308 registros en staging |
 | MongoDB Atlas | ✅ | 8 colecciones; 3.184 documentos |
 | Documentación ETL (README) | ✅ | Guía de estudio y sustentación |
-| Power BI modelo | ✅ | TMDL + ~30 medidas |
-| Power BI reporte | ✅ | 4 páginas · ~39 visuals |
-| Power BI → Atlas | 🔄 | `model.tmdl` aún apunta a LocalDB |
-| Plan B CSV | ✅ | `generate_csvs.py` validado |
+| Documentación onboarding | ✅ | [Guía de configuración desde cero](#guía-de-configuración-desde-cero) |
+| Power BI modelo | ✅ | TMDL + ~30 medidas DAX |
+| Power BI reporte | ✅ | 4 páginas · ~39 visuals (diseño) |
+| Power BI → Atlas SQL | ✅ | 8 tablas cargan datos desde Mongo vía ODBC |
+| Power BI vistas / KPIs | ✅ | 4 páginas con datos; filtros slicer corregidos (F4-12); `[Total Ventas]` ≈ $1.265M |
+| Plan B CSV | ✅ | `plan-b/csvs/` como respaldo |
 | Task Scheduler | 📋 | Opcional para demos periódicas |
 
-### Próximos pasos
+### Próximos pasos (opcionales)
 
-1. Reconectar `model.tmdl` al DW en MongoDB Atlas (o CSV de `plan-b/`)
-2. Refrescar Power BI y validar medidas DAX contra datos del ETL
-3. Programar Task Scheduler para demostrar ejecuciones periódicas
-4. (Opcional) Implementar carga incremental con `watermark.py`
+1. Programar Task Scheduler para demostrar ejecuciones periódicas del ETL.
+2. (Opcional) Implementar carga incremental con `watermark.py`.
+3. (Opcional) Refactorizar consultas TMDL para usar parámetros `MongoDB Atlas URI` en lugar de URI hardcodeada por tabla.
 
 ---
 
@@ -1745,4 +2175,4 @@ MIT — ver [LICENSE](LICENSE)
 
 ---
 
-*Última actualización documental: junio 2026 — documentación ETL ampliada para estudio y sustentación. Este README es el índice central del proyecto; las decisiones nuevas se registran en [Registro de decisiones](#registro-de-decisiones-de-diseño).*
+*Última actualización documental: junio 2026 — ETL verificado E2E (run_id=4, 67 s), reporte Power BI validado en 4 páginas, [Guía de estudio](docs/GUIA_ESTUDIO.md) y scripts de mantenimiento PBIR. Este README es el índice central del proyecto; las decisiones nuevas se registran en [Registro de decisiones](#registro-de-decisiones-de-diseño).*

@@ -27,17 +27,39 @@ table dim_shipper
 		summarizeBy: none
 		sourceColumn: phone
 
+	column _id
+		dataType: string
+		lineageTag: 0b9ac52f-581d-4587-a3c9-78e48feb5507
+		summarizeBy: none
+		sourceColumn: _id
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_delivery_days
+		dataType: double
+		lineageTag: 1ebfdeff-0484-45b0-8cfe-eaa6df506d11
+		summarizeBy: none
+		sourceColumn: avg_delivery_days
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
 	partition dim_shipper-m = m
 		mode: import
 		source =
 				let
-				    Source   = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
-				    Shippers = Source{[Schema="dbo", Item="Shippers"]}[Data],
-				    Renamed  = Table.RenameColumns(Shippers, {
-				        {"ShipperID",   "shipper_id"},
-				        {"CompanyName", "company_name"},
-				        {"Phone",       "phone"}
-				    })
+				  Origen = MongoDBAtlasODBC.Contents("mongodb://atlas-sql-6930c29c08aae91552e44bdc-8l1q1z.a.query.mongodb.net/northwind_dw?ssl=true&authSource=admin", "northwind_dw", []),
+				  #"Navegación 1" = Origen{[Name = "northwind_dw", Kind = "Database"]}[Data],
+				  #"Navegación 2" = #"Navegación 1"{[Name = "dim_shipper", Kind = "Table"]}[Data],
+				  #"Tipo cambiado" = Table.TransformColumnTypes(#"Navegación 2", {
+				    {"shipper_id", Int64.Type}, {"company_name", type text}, {"phone", type text},
+				    {"_id", type text}, {"avg_delivery_days", type number}
+				  })
 				in
-				    Renamed
+				  #"Tipo cambiado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
 
