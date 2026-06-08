@@ -35,7 +35,7 @@ Power BI (.pbip: TMDL + PBIR, 4 páginas, P1–P10)
 | 4 | Código ETL módulo a módulo | `etl/etl/*.py` + README § pipeline.py… | 2 h |
 | 5 | Modelo dimensional | README § Modelo estrella, Colecciones MongoDB | 30 min |
 | 6 | Power BI conexión ODBC | README § Conexión Atlas SQL | 30 min |
-| 7 | Reporte y medidas DAX | `proyecto-bi/README.md` + `_Medidas.tmdl` | 45 min |
+| 7 | Reporte y medidas DAX | README § Proyecto PBIP + `_Medidas.tmdl` | 45 min |
 | 8 | Corrección filtros slicer | Esta guía § 5 + `scripts/` | 20 min |
 | 9 | Verificación E2E | Esta guía § 4 | 30 min |
 | 10 | Guión sustentación | README § Cómo explicarlo en la sustentación | 30 min |

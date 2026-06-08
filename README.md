@@ -79,13 +79,13 @@
 - [Power BI — Conexión a MongoDB Atlas SQL](#power-bi--conexión-a-mongodb-atlas-sql)
 - [Power BI — Validación de vistas y medidas](#power-bi--validación-de-vistas-y-medidas)
 - [Proyecto PBIP / TMDL / PBIR](#proyecto-pbip--tmdl--pbir)
+- [Power BI — Mantenimiento de filtros (slicers)](#power-bi--mantenimiento-de-filtros-slicers)
 - [Páginas del reporte](#páginas-del-reporte)
 
 ### Operación y respaldo
 - [Plan B — CSV sin infraestructura](#plan-b--csv-sin-infraestructura)
 - [Guía de estudio (documento dedicado)](docs/GUIA_ESTUDIO.md) ← **material para sustentación**
 - [Estructura del repositorio](#estructura-del-repositorio)
-- [Guía de configuración desde cero](#guía-de-configuración-desde-cero)
 - [Guía de ejecución rápida](#guía-de-ejecución-rápida)
 - [Errores corregidos (auditoría)](#errores-corregidos-auditoría)
 - [Punto extra — Tabular SSAS](#punto-extra--tabular-ssas)
@@ -99,7 +99,7 @@ Proyecto de **Business Intelligence** sobre **Northwind Traders**. El pipeline t
 
 La **arquitectura objetivo** desacopla las capas en la nube: dos proyectos **Supabase** (fuente y staging), **MongoDB Atlas** como DW, y un **ETL Python ejecutado en el PC del desarrollador** que orquesta todo el ciclo. Power BI se actualiza contra el DW remoto (modo Import con refresh).
 
-> Ver también: [Arquitectura objetivo](#arquitectura-objetivo-cloud) · [Registro de decisiones](#registro-de-decisiones-de-diseño) · [Guía del ETL](#etl--visión-general)
+> Ver también: [Arquitectura objetivo](#arquitectura-objetivo-cloud) · [Registro de decisiones](#registro-de-decisiones-de-diseño) · [Guía del ETL](#etl--visión-ejecutiva-30-segundos)
 
 ---
 
@@ -144,7 +144,7 @@ Arquitectura acordada para el proyecto en producción académica. El ETL corre *
             │  EXTRACT (Fase A)
             ▼
 ┌─────────────────────────┐
-│ Tu PC — Python ETL      │  pipeline.py (en evolución)
+│ Tu PC — Python ETL      │  pipeline.py
 │ transform + validate    │
 └───────────┬─────────────┘
             │  LOAD staging
@@ -368,7 +368,7 @@ Configuración en `C:\Users\david\.cursor\mcp.json` (dos entradas, una por proye
 
 ## Variables de entorno (`.env`)
 
-Archivo **local**, nunca en Git. Crear `.env.example` en el repo como plantilla.
+Archivo **local**, nunca en Git. Copiar `.env.example` de la raíz del repo como plantilla.
 
 ```env
 # ── Supabase Fuente (northwind-oltp) ──
@@ -921,8 +921,9 @@ Pandas representa valores SQL `NULL` como `float('nan')`. En Python, `nan is not
 ```
 etl/
 ├── pipeline.py                 ← entrada única
+├── _check_env.py               ← diagnóstico de conexiones
 ├── requirements.txt
-├── logs/                       ← generado al ejecutar
+├── logs/                       ← generado al ejecutar (gitignored)
 ├── sql/
 │   ├── northwind_oltp_supabase.sql      ← manual, una vez (fuente)
 │   └── northwind_staging_supabase.sql   ← bootstrap automático
@@ -1587,17 +1588,20 @@ margen            = total_venta − costo_total
 
 ## Medidas DAX
 
-Tabla `_Medidas` — 30 medidas organizadas por P1–P10. Ejemplos:
+Tabla `_Medidas` — **30 medidas** organizadas por P1–P10. Medidas clave:
 
 ```dax
-[Total Ventas]         = SUM(fact_ventas[total_venta])
-[Unidades Vendidas]  = SUM(fact_ventas[cantidad])
-[% Cumplimiento Meta]= DIVIDE([Total Ventas], [Meta Periodo]) * 100
-[Avg Dias Entrega]   = AVERAGEX(FILTER(fact_ventas, NOT ISBLANK([dias_entrega])), fact_ventas[dias_entrega])
-[Es Cliente Inactivo] = IF([Días Sin Comprar] > 365, "Inactivo", "Activo")
+[Total Ventas]          = SUM(fact_ventas[total_venta])       -- ~$1.265M
+[Num Ordenes]           = DISTINCTCOUNT(fact_ventas[order_id])
+[Clientes Activos]      = DISTINCTCOUNT(fact_ventas[cliente_id])
+[Unidades Vendidas]     = SUM(fact_ventas[cantidad])
+[% Margen Promedio]     = DIVIDE([Total Margen], [Total Ventas]) * 100
+[% Cumplimiento Meta]   = DIVIDE([Total Ventas], [Meta Periodo]) * 100
+[Avg Dias Entrega]      = AVERAGEX(FILTER(fact_ventas, NOT ISBLANK([dias_entrega])), fact_ventas[dias_entrega])
+[Es Cliente Inactivo]   = IF([Días Sin Comprar] > 365, "Inactivo", "Activo")
 ```
 
-Listado completo en `proyecto-bi/northwind_bi.SemanticModel/definition/model.tmdl`.
+Listado completo en `proyecto-bi/northwind_bi.SemanticModel/definition/tables/_Medidas.tmdl`.
 
 ---
 
@@ -1724,7 +1728,8 @@ in
 En Mongo la granularidad es **`empleado_id + anio + trimestre`** (108 filas: 9 empleados × 3 años × 4 trimestres). `empleado_id` **no es único** (el valor `1` aparece 12 veces).
 
 - **No** marcar `empleado_id` como clave única (`isKey`) en el modelo.
-- Las medidas DAX (`[Meta Periodo]`, etc.) filtran por los tres campos vía `CALCULATE`, sin relación directa a esta tabla.
+- No hay relación directa con `fact_ventas`; sí hay relación activa con `dim_empleado` para contexto de metas.
+- Las medidas DAX (`[Meta Periodo]`, etc.) filtran por `empleado_id`, `anio` y `trimestre` vía `CALCULATE`.
 
 ### Qué NO hacer
 
@@ -1832,7 +1837,7 @@ Repetir lógica similar en dimensiones (`cliente_id` = texto, IDs numéricos = E
 
 #### 3. Verificar relaciones en Vista de modelo
 
-Deben existir **7 relaciones activas** desde `fact_ventas`:
+Deben existir **6 relaciones activas** desde `fact_ventas` hacia dimensiones:
 
 | Desde | Hacia | Columna |
 |-------|-------|---------|
@@ -1843,9 +1848,11 @@ Deben existir **7 relaciones activas** desde `fact_ventas`:
 | `fact_ventas` | `dim_shipper` | `shipper_id` |
 | `fact_ventas` | `dim_territorio` | `territorio_id` |
 
+Además, **1 relación activa** auxiliar: `dim_metas_empleado.empleado_id` → `dim_empleado.empleado_id` (contexto de metas P5; granularidad trimestral, no línea de hecho).
+
 - Sin iconos de advertencia (tipos incompatibles).
 - Cardinalidad: muchos a uno (*:1) desde hechos hacia dimensiones.
-- `dim_metas_empleado` **no** tiene relación directa (las medidas P5 filtran con DAX).
+- `fact_ventas.fecha_entrega_id` → `dim_fecha` existe pero está **inactiva** (rol de fecha de entrega opcional).
 
 Si una relación está rota: revisar que `fecha_id` y `cliente_id` sean **mismo tipo** en hechos y dimensiones (texto `YYYYMMDD` y texto respectivamente).
 
@@ -1891,25 +1898,89 @@ Métricas de referencia: **2.155** líneas de hecho · **~$1.265.793** ventas to
 
 ## Proyecto PBIP / TMDL / PBIR
 
+Proyecto **PBIP** con modelo semántico **TMDL** y reporte **PBIR**. Consume el DW `northwind_dw` en MongoDB Atlas vía **Atlas SQL + ODBC** (modo Import).
+
 ```
 proyecto-bi/
-├── northwind_bi.pbip
-├── northwind_bi.SemanticModel/   ← TMDL, compatibilityLevel 1600
+├── northwind_bi.pbip                    ← punto de entrada
+├── northwind_bi.SemanticModel/        ← TMDL, compatibilityLevel 1600
 │   └── definition/
-│       ├── expressions.tmdl      ← parámetros MongoDB Atlas URI / Database
-│       ├── relationships.tmdl
-│       └── tables/*.tmdl         ← 8 tablas + _Medidas
-└── northwind_bi.Report/          ← PBIR, 4 páginas
+│       ├── database.tmdl
+│       ├── expressions.tmdl           ← parámetros MongoDB Atlas URI / Database
+│       ├── relationships.tmdl         ← 6 activas desde fact_ventas + metas→empleado
+│       ├── model.tmdl
+│       └── tables/
+│           ├── fact_ventas.tmdl
+│           ├── dim_*.tmdl             ← 7 dimensiones
+│           └── _Medidas.tmdl          ← 30 medidas DAX (P1–P10)
+└── northwind_bi.Report/               ← PBIR, 4 páginas, ~39 visuales
+    ├── definition/
+    │   ├── report.json
+    │   └── pages/
+    └── AUDIT-report-filters.json      ← auditoría slicers (jun 2026)
+```
+
+### Modelo semántico — tablas (9)
+
+| Tabla | Origen MongoDB | Filas aprox. |
+|-------|----------------|--------------|
+| `fact_ventas` | `fact_ventas` | 2.155 |
+| `dim_fecha` | `dim_fecha` | 672 |
+| `dim_cliente` | `dim_cliente` | 91 |
+| `dim_empleado` | `dim_empleado` | 9 |
+| `dim_producto` | `dim_producto` | 77 |
+| `dim_shipper` | `dim_shipper` | 3 |
+| `dim_territorio` | `dim_territorio` | 69 |
+| `dim_metas_empleado` | `dim_metas_empleado` | 108 |
+| `_Medidas` | Calculada | 30 medidas |
+
+### Relaciones activas
+
+`fact_ventas` se relaciona con **6 dimensiones** por FK (`fecha_id`, `cliente_id`, `empleado_id`, `producto_id`, `shipper_id`, `territorio_id`). `dim_metas_empleado` se relaciona con `dim_empleado` para contexto de metas (P5). La relación `fecha_entrega_id` → `dim_fecha` existe pero está **inactiva**.
+
+### Prerrequisitos de datos (antes del refresh)
+
+El ETL debe haber cargado MongoDB antes de abrir o actualizar el reporte:
+
+```bash
+cd etl/
+python _check_env.py    # 8 colecciones OK
+python pipeline.py      # recarga DW
 ```
 
 ### Abrir en Power BI Desktop
 
-1. **Archivo → Abrir** → `proyecto-bi/northwind_bi.pbip`
-2. Configurar credenciales Atlas SQL (primera vez). Ver [guía de conexión](#power-bi--conexión-a-mongodb-atlas-sql).
-3. **Inicio → Actualizar** (no volver a **Obtener datos** si las 8 tablas ya existen)
-4. Guardar
+1. Instalar [Power BI Desktop](https://powerbi.microsoft.com/desktop/) 64 bits y [MongoDB Atlas SQL ODBC Driver](https://www.mongodb.com/try/download/odbc-driver) 64 bits.
+2. **Archivo → Abrir** → `proyecto-bi/northwind_bi.pbip`
+3. Configurar credenciales Atlas SQL (primera vez). Ver [guía de conexión](#power-bi--conexión-a-mongodb-atlas-sql).
+4. **Inicio → Actualizar** (no volver a **Obtener datos** si las 8 tablas ya existen)
+5. Guardar
 
 > **Import Mode:** tras actualizar, los datos quedan embebidos; la sustentación puede funcionar offline si se refrescó antes.
+
+---
+
+## Power BI — Mantenimiento de filtros (slicers)
+
+Si el reporte muestra `(En blanco)` **después** de cargar datos correctamente en las tablas, suele deberse a **filtros guardados en segmentadores** (sincronizados entre páginas), no a un fallo de conexión.
+
+### Corrección automática
+
+```bash
+# Desde la raíz del repo
+python scripts/audit_fix_report_filters.py
+```
+
+Script alternativo: `scripts/fix_slicer_null_filters.py` (mismo propósito, enfoque distinto).
+
+### Pasos posteriores
+
+1. Cerrar Power BI sin guardar cambios locales rotos (si aplica).
+2. Reabrir `proyecto-bi/northwind_bi.pbip`.
+3. **Inicio → Actualizar**.
+4. **Vista → Limpiar todas las segmentaciones** (o resetear `anio`, `trimestre`, `zona` a **Todas**).
+
+Auditoría generada: `proyecto-bi/northwind_bi.Report/AUDIT-report-filters.json`. Detalle del bug F4-12 en [Errores corregidos](#errores-corregidos-auditoría). Material de estudio: [docs/GUIA_ESTUDIO.md](docs/GUIA_ESTUDIO.md).
 
 ---
 
@@ -1932,11 +2003,11 @@ Si falla la red, los servicios cloud o el **ODBC de Atlas SQL** en la sustentaci
 
 ```bash
 cd plan-b/
-python verify_csvs.py     # valida csvs/ existentes
-python generate_csvs.py   # requiere northwind.sql (T-SQL) en plan-b/
+python verify_csvs.py     # valida csvs/ existentes (8 archivos ya incluidos en el repo)
+python generate_csvs.py   # opcional: requiere northwind.sql (T-SQL) en plan-b/ — no incluido en el repo
 ```
 
-Conectar Power BI a `plan-b/csvs/*.csv` en lugar de Atlas/Supabase.
+Conectar Power BI a `plan-b/csvs/*.csv` en lugar de Atlas/Supabase. Los CSV pregenerados cubren las 8 tablas del modelo (`dim_*` + `fact_ventas`).
 
 **Métricas esperadas:** 2,155 facts · $1,265,793 ventas · 31.3 % margen global.
 
@@ -1952,17 +2023,23 @@ advanced-db-final-project/
 ├── docs/
 │   └── GUIA_ESTUDIO.md            # Guía de estudio y sustentación
 ├── etl/                           # Pipeline Python (OLTP → staging → DW)
-│   ├── pipeline.py
-│   ├── sql/                       # DDL Supabase
+│   ├── pipeline.py                # Entrada única del ETL
+│   ├── _check_env.py              # Diagnóstico de conexiones (OLTP, staging, Mongo)
+│   ├── requirements.txt
+│   ├── sql/                       # DDL Supabase (oltp + staging)
 │   └── etl/                       # Módulos Python del paquete
 ├── scripts/                       # Mantenimiento PBIR (filtros slicer)
 │   ├── audit_fix_report_filters.py
 │   └── fix_slicer_null_filters.py
 ├── plan-b/                        # CSV de respaldo para Power BI
-│   ├── csvs/
-│   ├── generate_csvs.py
+│   ├── csvs/                      # 8 CSV pregenerados (dim_* + fact_ventas)
+│   ├── generate_csvs.py           # Regenerar CSV (requiere northwind.sql externo)
 │   └── verify_csvs.py
-└── proyecto-bi/                   # Power BI PBIP (ver proyecto-bi/README.md)
+└── proyecto-bi/                   # Power BI PBIP (documentado en este README § Power BI)
+    ├── northwind_bi.pbip
+    ├── northwind_bi.SemanticModel/
+    └── northwind_bi.Report/
+        └── AUDIT-report-filters.json   # Auditoría de slicers (jun 2026)
 ```
 
 ---
@@ -2130,7 +2207,7 @@ Guías completas: [Configuración desde cero](#guía-de-configuración-desde-cer
 | F4-11 | Power BI | CRÍTICO | `TransformColumnTypes` en 8 tablas TMDL (ODBC importaba números/fechas como texto) |
 | F4-12 | PBIR | CRÍTICO | Slicers con filtros guardados/sincronizados vaciaban el reporte (*flash then blank*); corregido con `scripts/audit_fix_report_filters.py` |
 
-Detalle ampliado en [docs/GUIA_ESTUDIO.md](docs/GUIA_ESTUDIO.md). Referencia histórica: `Reporte_Errores_Corregidos.docx`.
+Detalle ampliado en [docs/GUIA_ESTUDIO.md](docs/GUIA_ESTUDIO.md).
 
 ---
 
@@ -2168,10 +2245,6 @@ Documentación: [TMDL overview](https://learn.microsoft.com/en-us/analysis-servi
 3. (Opcional) Refactorizar consultas TMDL para usar parámetros `MongoDB Atlas URI` en lugar de URI hardcodeada por tabla.
 
 ---
-
-## Licencia
-
-MIT — ver [LICENSE](LICENSE)
 
 ---
 
