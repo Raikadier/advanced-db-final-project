@@ -1,0 +1,29 @@
+relationship fv_fecha
+	fromColumn: fact_ventas.fecha_id
+	toColumn: dim_fecha.fecha_id
+
+relationship fv_fecha_entrega
+	isActive: false
+	fromColumn: fact_ventas.fecha_entrega_id
+	toColumn: dim_fecha.fecha_id
+
+relationship fv_cliente
+	fromColumn: fact_ventas.cliente_id
+	toColumn: dim_cliente.cliente_id
+
+relationship fv_empleado
+	fromColumn: fact_ventas.empleado_id
+	toColumn: dim_empleado.empleado_id
+
+relationship fv_producto
+	fromColumn: fact_ventas.producto_id
+	toColumn: dim_producto.producto_id
+
+relationship fv_shipper
+	fromColumn: fact_ventas.shipper_id
+	toColumn: dim_shipper.shipper_id
+
+relationship fv_territorio
+	fromColumn: fact_ventas.territorio_id
+	toColumn: dim_territorio.territorio_id
+

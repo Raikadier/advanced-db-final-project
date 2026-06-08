@@ -1,0 +1,79 @@
+/// ============================================================
+/// DIMENSIÓN: dim_territorio
+/// Fuente: ShipCountry único de Orders + mapa de zonas
+/// Responde: P6 (análisis territorial), P7 (entrega por región)
+/// ============================================================
+table dim_territorio
+	lineageTag: 846a60c1-c02e-415a-984c-a992b2d9edc5
+
+	column territorio_id
+		dataType: string
+		isKey
+		displayFolder: Claves
+		lineageTag: c8a4dbf5-f83c-4146-b92f-80d4dd63dc8b
+		summarizeBy: none
+		sourceColumn: territorio_id
+
+	column country
+		dataType: string
+		lineageTag: b16dc744-8009-48af-94d2-3a4ae9d5bf90
+		dataCategory: Country
+		summarizeBy: none
+		sourceColumn: country
+
+	column region
+		dataType: string
+		lineageTag: bdf98dff-09a3-4f18-847a-cc9e4faa1dee
+		summarizeBy: none
+		sourceColumn: region
+
+	column continente
+		dataType: string
+		lineageTag: 50e92057-fd7b-4cba-a082-6217f42451bf
+		summarizeBy: none
+		sourceColumn: continente
+
+	column zona
+		dataType: string
+		lineageTag: 95f795f2-ac36-4cbc-95d6-9edaf98e014d
+		summarizeBy: none
+		sourceColumn: zona
+
+	hierarchy 'Jerarquía Territorial'
+		lineageTag: 2aae7728-2f02-40e8-8b30-a02be4e7b051
+
+		level Continente
+			lineageTag: e8fb9b42-b0b5-46e8-8fb3-2402c3a47897
+			column: continente
+
+		level Zona
+			lineageTag: 9c24c3f0-a5e9-4e1f-9087-7ed29cd6402f
+			column: zona
+
+		level País
+			lineageTag: b2c0ae76-d064-423e-a68d-6771adb73611
+			column: country
+
+	partition dim_territorio-m = m
+		mode: import
+		source =
+				let
+				    Source  = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
+				    Orders  = Source{[Schema="dbo", Item="Orders"]}[Data],
+				    Sel     = Table.SelectColumns(Orders, {"ShipCountry", "ShipRegion"}),
+				    Unique  = Table.Distinct(Sel),
+				    WithId  = Table.AddColumn(Unique, "territorio_id",
+				        each Text.Upper(Text.Start([ShipCountry], 3)) & "-" &
+				             Text.Upper(Text.Start(
+				                 if [ShipRegion] = null then "XX" else [ShipRegion],
+				                 2)),
+				        type text),
+				    WithZone = Table.AddColumn(WithId, "zona", each "Ver dashboard", type text),
+				    WithCont = Table.AddColumn(WithZone, "continente", each "Ver dashboard", type text),
+				    Renamed = Table.RenameColumns(WithCont, {
+				        {"ShipCountry", "country"},
+				        {"ShipRegion",  "region"}
+				    })
+				in
+				    Renamed
+

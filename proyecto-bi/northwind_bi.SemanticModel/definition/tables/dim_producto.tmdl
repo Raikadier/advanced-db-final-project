@@ -1,0 +1,138 @@
+/// ============================================================
+/// DIMENSIÓN: dim_producto
+/// Fuente: Products + Categories (77 productos, 8 categorías)
+/// Responde: P3 (más vendidos), P4 (por categoría), P8 (margen)
+/// ============================================================
+table dim_producto
+	lineageTag: 02c1475f-3972-4e46-b533-49cd54d51f7b
+
+	column producto_id
+		dataType: int64
+		isKey
+		displayFolder: Claves
+		lineageTag: 02338b41-a0bc-4124-bcbe-d86026ed40e1
+		summarizeBy: none
+		sourceColumn: producto_id
+
+	column product_name
+		dataType: string
+		lineageTag: 2633fa41-f4f0-4803-bbd0-24cd6e63f6db
+		summarizeBy: none
+		sourceColumn: product_name
+
+	column categoria_id
+		dataType: int64
+		isHidden
+		displayFolder: Claves
+		lineageTag: 20669bc3-82e2-47dd-94ca-d8b436bf568d
+		summarizeBy: none
+		sourceColumn: categoria_id
+
+	column categoria
+		dataType: string
+		lineageTag: 2b64e804-112e-453f-88da-dc47ec82c824
+		summarizeBy: none
+		sourceColumn: categoria
+
+	column proveedor_id
+		dataType: int64
+		isHidden
+		lineageTag: 03a5de65-8866-408c-a98e-1feb5005716b
+		summarizeBy: none
+		sourceColumn: proveedor_id
+
+	column quantity_per_unit
+		dataType: string
+		isHidden
+		lineageTag: 7f05a7f7-ebc3-49ea-947c-ff47468f8d0c
+		summarizeBy: none
+		sourceColumn: quantity_per_unit
+
+	column unit_price
+		dataType: double
+		formatString: $#,##0.00
+		lineageTag: e16263ea-e4e7-4cd0-9440-61deda3f5ba7
+		summarizeBy: none
+		sourceColumn: unit_price
+
+	/// Estimado = 60% del UnitPrice histórico (supuesto documentado Fase 1)
+	column costo_adquisicion
+		dataType: double
+		formatString: $#,##0.00
+		lineageTag: 07563fc4-ab42-4e49-8c76-71bc4ece12d2
+		summarizeBy: none
+		sourceColumn: costo_adquisicion
+
+	column units_in_stock
+		dataType: int64
+		lineageTag: 2508c8d6-9780-4695-aa0a-6bca6a5ea7bb
+		summarizeBy: none
+		sourceColumn: units_in_stock
+
+	column units_on_order
+		dataType: int64
+		lineageTag: 1c62f984-03d5-414a-895d-49305596bf2a
+		summarizeBy: none
+		sourceColumn: units_on_order
+
+	column reorder_level
+		dataType: int64
+		isHidden
+		lineageTag: 6a0d2510-8f00-469e-bba8-35f9c63d1e86
+		summarizeBy: none
+		sourceColumn: reorder_level
+
+	column discontinued
+		dataType: boolean
+		lineageTag: 149a5b71-b087-4f5e-83c0-45cbe791f9cb
+		summarizeBy: none
+		sourceColumn: discontinued
+
+	hierarchy 'Jerarquía Producto'
+		lineageTag: 76c58772-c34e-438a-8f5d-865d608336d1
+
+		level Categoría
+			lineageTag: 552a964a-702a-462c-bf1a-8f4eed6fc2b0
+			column: categoria
+
+		level Producto
+			lineageTag: f226da6f-06ad-4384-8b33-a279052c67e3
+			column: product_name
+
+	partition dim_producto-m = m
+		mode: import
+		source =
+				let
+				    Source     = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
+				    Products   = Source{[Schema="dbo", Item="Products"]}[Data],
+				    Categories = Source{[Schema="dbo", Item="Categories"]}[Data],
+				    CatSel = Table.SelectColumns(Categories, {"CategoryID", "CategoryName"}),
+				    Joined = Table.NestedJoin(
+				        Products, "CategoryID",
+				        CatSel,   "CategoryID",
+				        "CatData", JoinKind.LeftOuter
+				    ),
+				    Expanded = Table.ExpandTableColumn(Joined, "CatData", {"CategoryName"}),
+				    Sel = Table.SelectColumns(Expanded, {
+				        "ProductID", "ProductName", "CategoryID", "CategoryName",
+				        "SupplierID", "QuantityPerUnit", "UnitPrice",
+				        "UnitsInStock", "UnitsOnOrder", "ReorderLevel", "Discontinued"
+				    }),
+				    CostoAdq = Table.AddColumn(Sel, "costo_adquisicion",
+				        each [UnitPrice] * 0.60, type number),
+				    Renamed = Table.RenameColumns(CostoAdq, {
+				        {"ProductID",       "producto_id"},
+				        {"ProductName",     "product_name"},
+				        {"CategoryID",      "categoria_id"},
+				        {"CategoryName",    "categoria"},
+				        {"SupplierID",      "proveedor_id"},
+				        {"QuantityPerUnit", "quantity_per_unit"},
+				        {"UnitPrice",       "unit_price"},
+				        {"UnitsInStock",    "units_in_stock"},
+				        {"UnitsOnOrder",    "units_on_order"},
+				        {"ReorderLevel",    "reorder_level"},
+				        {"Discontinued",    "discontinued"}
+				    })
+				in
+				    Renamed
+

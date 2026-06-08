@@ -1,0 +1,126 @@
+/// ============================================================
+/// DIMENSIÓN: dim_cliente
+/// Fuente: Northwind.Customers (91 registros, 21 países)
+/// Responde: P2 (clientes rentables), P6 (geografía), P9 (inactivos)
+/// ============================================================
+table dim_cliente
+	lineageTag: 37507262-757a-47b4-b8cf-18f6e1ba6356
+
+	column cliente_id
+		dataType: string
+		isKey
+		displayFolder: Claves
+		lineageTag: 462dacca-7dbf-4658-aa7b-3cc8693b2ecf
+		summarizeBy: none
+		sourceColumn: cliente_id
+
+	column company_name
+		dataType: string
+		lineageTag: 800d68c3-5cdf-465e-8ae0-a271fb366a0f
+		summarizeBy: none
+		sourceColumn: company_name
+
+	column contact_name
+		dataType: string
+		isHidden
+		lineageTag: 4b2f72a2-66e1-41ed-946b-997551adda28
+		summarizeBy: none
+		sourceColumn: contact_name
+
+	column contact_title
+		dataType: string
+		isHidden
+		lineageTag: 1c4d159d-718f-493f-896d-88493f36b7af
+		summarizeBy: none
+		sourceColumn: contact_title
+
+	column city
+		dataType: string
+		lineageTag: 609b37b5-d0e9-436f-89aa-fefa6c242242
+		dataCategory: City
+		summarizeBy: none
+		sourceColumn: city
+
+	column region
+		dataType: string
+		lineageTag: ce97aecb-3210-4235-ae1e-b833244a219c
+		summarizeBy: none
+		sourceColumn: region
+
+	column country
+		dataType: string
+		lineageTag: 564dc484-5c5b-4f7c-812d-8de469b0d8a5
+		dataCategory: Country
+		summarizeBy: none
+		sourceColumn: country
+
+	column address
+		dataType: string
+		isHidden
+		lineageTag: 3184c493-372c-4bce-9b45-eed7314143fd
+		summarizeBy: none
+		sourceColumn: address
+
+	column postal_code
+		dataType: string
+		isHidden
+		lineageTag: a33bee43-9d18-43a4-8390-ee9a7b9f6119
+		summarizeBy: none
+		sourceColumn: postal_code
+
+	column phone
+		dataType: string
+		isHidden
+		lineageTag: 331d424f-290f-42c6-8696-fa01d9d48b7a
+		summarizeBy: none
+		sourceColumn: phone
+
+	column fax
+		dataType: string
+		isHidden
+		lineageTag: 4c5cd1fb-fd2c-4976-bfe9-ce057dd796ce
+		summarizeBy: none
+		sourceColumn: fax
+
+	hierarchy 'Jerarquía Geográfica Cliente'
+		lineageTag: 4f70b033-64a0-49a4-a9fd-e39f5c9692a2
+
+		level País
+			lineageTag: 4f14a207-fd68-4e4c-b640-dfed12916c7e
+			column: country
+
+		level Ciudad
+			lineageTag: b0bd25b5-199c-48dc-ab5c-d7ba9cc8f650
+			column: city
+
+		level Cliente
+			lineageTag: 757ddb17-c5f4-4da8-aa4c-757f850e0a31
+			column: company_name
+
+	partition dim_cliente-m = m
+		mode: import
+		source =
+				let
+				    Source   = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
+				    Clientes = Source{[Schema="dbo", Item="Customers"]}[Data],
+				    Sel = Table.SelectColumns(Clientes, {
+				        "CustomerID", "CompanyName", "ContactName", "ContactTitle",
+				        "Address", "City", "Region", "PostalCode", "Country",
+				        "Phone", "Fax"
+				    }),
+				    Renamed = Table.RenameColumns(Sel, {
+				        {"CustomerID",   "cliente_id"},
+				        {"CompanyName",  "company_name"},
+				        {"ContactName",  "contact_name"},
+				        {"ContactTitle", "contact_title"},
+				        {"Address",      "address"},
+				        {"City",         "city"},
+				        {"Region",       "region"},
+				        {"PostalCode",   "postal_code"},
+				        {"Country",      "country"},
+				        {"Phone",        "phone"},
+				        {"Fax",          "fax"}
+				    })
+				in
+				    Renamed
+

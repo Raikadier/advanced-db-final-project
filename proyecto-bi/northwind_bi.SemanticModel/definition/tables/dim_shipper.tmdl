@@ -1,0 +1,43 @@
+/// ============================================================
+/// DIMENSIÓN: dim_shipper
+/// Fuente: Northwind.Shippers (3 transportistas)
+/// Responde: P7 (tiempos de entrega por transportista)
+/// ============================================================
+table dim_shipper
+	lineageTag: 0d70e9bb-2e81-42c6-91bf-224940efa241
+
+	column shipper_id
+		dataType: int64
+		isKey
+		displayFolder: Claves
+		lineageTag: 84aaecee-7d7e-4411-b8c8-146cfa7af0b2
+		summarizeBy: none
+		sourceColumn: shipper_id
+
+	column company_name
+		dataType: string
+		lineageTag: abf0f72e-749c-4c68-8021-54f02885f708
+		summarizeBy: none
+		sourceColumn: company_name
+
+	column phone
+		dataType: string
+		isHidden
+		lineageTag: 81959110-f4b5-4d81-9e9a-f888e9221c27
+		summarizeBy: none
+		sourceColumn: phone
+
+	partition dim_shipper-m = m
+		mode: import
+		source =
+				let
+				    Source   = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
+				    Shippers = Source{[Schema="dbo", Item="Shippers"]}[Data],
+				    Renamed  = Table.RenameColumns(Shippers, {
+				        {"ShipperID",   "shipper_id"},
+				        {"CompanyName", "company_name"},
+				        {"Phone",       "phone"}
+				    })
+				in
+				    Renamed
+

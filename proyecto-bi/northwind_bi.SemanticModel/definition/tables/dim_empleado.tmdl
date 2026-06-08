@@ -1,0 +1,110 @@
+/// ============================================================
+/// DIMENSIÓN: dim_empleado
+/// Fuente: Northwind.Employees (9 registros)
+/// Responde: P5 (eficiencia vendedores), P6 (territorios)
+/// ============================================================
+table dim_empleado
+	lineageTag: 2af8621c-953f-4647-a86a-4aae20049590
+
+	column empleado_id
+		dataType: int64
+		isKey
+		displayFolder: Claves
+		lineageTag: 73f600b4-7bf2-4fe0-b2a3-81b67e722b59
+		summarizeBy: none
+		sourceColumn: empleado_id
+
+	column last_name
+		dataType: string
+		isHidden
+		lineageTag: 9362ea32-b66a-4904-9be8-cdeb87af65ff
+		summarizeBy: none
+		sourceColumn: last_name
+
+	column first_name
+		dataType: string
+		isHidden
+		lineageTag: f034c406-ce3f-44da-bf8e-be6135ef5b66
+		summarizeBy: none
+		sourceColumn: first_name
+
+	column full_name
+		dataType: string
+		lineageTag: 93468203-cc42-4560-a571-ab9911695918
+		summarizeBy: none
+		sourceColumn: full_name
+
+	column title
+		dataType: string
+		lineageTag: 66f85483-4ea0-4c88-8f90-13ab925ec598
+		summarizeBy: none
+		sourceColumn: title
+
+	column title_of_courtesy
+		dataType: string
+		isHidden
+		lineageTag: 01cdb9bf-a865-4de7-8026-04948f7f6fca
+		summarizeBy: none
+		sourceColumn: title_of_courtesy
+
+	column hire_date
+		dataType: dateTime
+		isHidden
+		formatString: dd/MM/yyyy
+		lineageTag: 665dab99-9da1-40bf-9412-f8990711a61e
+		summarizeBy: none
+		sourceColumn: hire_date
+
+	column city
+		dataType: string
+		lineageTag: 63e05174-0c22-46b4-92b8-2fb5399062b5
+		summarizeBy: none
+		sourceColumn: city
+
+	column region
+		dataType: string
+		lineageTag: e2efea4b-0eef-4dff-bd94-5882475dd377
+		summarizeBy: none
+		sourceColumn: region
+
+	column country
+		dataType: string
+		lineageTag: a249ff79-e152-4be3-b9c1-23ced77fbe3a
+		summarizeBy: none
+		sourceColumn: country
+
+	column reports_to
+		dataType: int64
+		isHidden
+		lineageTag: cef6f25d-6e20-4a5f-9032-19714436540d
+		summarizeBy: none
+		sourceColumn: reports_to
+
+	partition dim_empleado-m = m
+		mode: import
+		source =
+				let
+				    Source    = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
+				    Empleados = Source{[Schema="dbo", Item="Employees"]}[Data],
+				    Sel = Table.SelectColumns(Empleados, {
+				        "EmployeeID", "LastName", "FirstName", "Title",
+				        "TitleOfCourtesy", "HireDate", "City", "Region",
+				        "Country", "ReportsTo"
+				    }),
+				    Renamed = Table.RenameColumns(Sel, {
+				        {"EmployeeID",       "empleado_id"},
+				        {"LastName",         "last_name"},
+				        {"FirstName",        "first_name"},
+				        {"Title",            "title"},
+				        {"TitleOfCourtesy",  "title_of_courtesy"},
+				        {"HireDate",         "hire_date"},
+				        {"City",             "city"},
+				        {"Region",           "region"},
+				        {"Country",          "country"},
+				        {"ReportsTo",        "reports_to"}
+				    }),
+				    FullName = Table.AddColumn(Renamed, "full_name",
+				        each [first_name] & " " & [last_name], type text)
+				in
+				    FullName
+

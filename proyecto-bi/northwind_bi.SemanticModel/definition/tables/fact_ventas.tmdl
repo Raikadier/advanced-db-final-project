@@ -1,0 +1,293 @@
+/// ============================================================
+/// TABLA DE HECHOS: fact_ventas
+/// Fuente: Orders JOIN Order Details — ~2155 registros
+/// Granularidad: 1 fila = 1 línea de detalle de pedido
+/// Responde: P1 a P10 (todas las preguntas)
+/// ============================================================
+table fact_ventas
+	lineageTag: 11cd4267-2ffb-492b-a42b-ff41f03710c1
+
+	column order_detail_id
+		dataType: string
+		isKey
+		displayFolder: Claves
+		lineageTag: 3a28fda0-d652-4fcd-bacf-cf2a38f1048a
+		summarizeBy: none
+		sourceColumn: order_detail_id
+
+	column order_id
+		dataType: int64
+		displayFolder: Claves
+		lineageTag: 2212c5f5-5621-4c08-9026-58866eddf7ea
+		summarizeBy: none
+		sourceColumn: order_id
+
+	column fecha_id
+		dataType: string
+		isHidden
+		displayFolder: Claves
+		lineageTag: 6775223e-7407-4ed1-9f39-cec6a596e165
+		summarizeBy: none
+		sourceColumn: fecha_id
+
+	column fecha_entrega_id
+		dataType: string
+		isHidden
+		displayFolder: Claves
+		lineageTag: 8b16b6a2-2137-4fcd-a9ca-19ff1c3cd859
+		summarizeBy: none
+		sourceColumn: fecha_entrega_id
+
+	column cliente_id
+		dataType: string
+		isHidden
+		displayFolder: Claves
+		lineageTag: b87f740b-3b99-42e1-9aee-44b57bb89a93
+		summarizeBy: none
+		sourceColumn: cliente_id
+
+	column empleado_id
+		dataType: int64
+		isHidden
+		displayFolder: Claves
+		lineageTag: eff31e7b-48b2-43ad-b5a1-0d10f413a01c
+		summarizeBy: none
+		sourceColumn: empleado_id
+
+	column producto_id
+		dataType: int64
+		isHidden
+		displayFolder: Claves
+		lineageTag: b69006c4-1c8b-4847-9a24-b48c719bd477
+		summarizeBy: none
+		sourceColumn: producto_id
+
+	column shipper_id
+		dataType: int64
+		isHidden
+		displayFolder: Claves
+		lineageTag: c8057477-a124-4d45-9dbb-268249134b8b
+		summarizeBy: none
+		sourceColumn: shipper_id
+
+	column territorio_id
+		dataType: string
+		isHidden
+		displayFolder: Claves
+		lineageTag: dc6be980-e14d-4fd8-9a5a-20a33beaf12b
+		summarizeBy: none
+		sourceColumn: territorio_id
+
+	column cantidad
+		dataType: int64
+		formatString: #,##0
+		displayFolder: Métricas
+		lineageTag: cf096ed7-68f0-47df-9832-586bf3a538b7
+		summarizeBy: sum
+		sourceColumn: cantidad
+
+	column unit_price
+		dataType: double
+		formatString: $#,##0.00
+		displayFolder: Métricas
+		lineageTag: 2007d90f-77be-4d2d-ac5b-bce2f501b808
+		summarizeBy: none
+		sourceColumn: unit_price
+
+	column descuento
+		dataType: double
+		formatString: 0.00%
+		displayFolder: Métricas
+		lineageTag: 35af73e8-cd55-4337-a09e-4409d2eb7c77
+		summarizeBy: none
+		sourceColumn: descuento
+
+	column freight
+		dataType: double
+		formatString: $#,##0.00
+		displayFolder: Métricas
+		lineageTag: 78bdbcff-e22f-453c-a3e9-183ef02400ec
+		summarizeBy: sum
+		sourceColumn: freight
+
+	column subtotal
+		dataType: double
+		formatString: $#,##0.00
+		displayFolder: Métricas
+		lineageTag: 79307e1a-71e2-4d7a-92df-b109b6c2cf0e
+		summarizeBy: sum
+		sourceColumn: subtotal
+
+	column total_venta
+		dataType: double
+		formatString: $#,##0.00
+		displayFolder: Métricas
+		lineageTag: 1f09e47c-fc6d-4ae8-a7dd-8f2d209f3d2f
+		summarizeBy: sum
+		sourceColumn: total_venta
+
+	column costo_total
+		dataType: double
+		formatString: $#,##0.00
+		displayFolder: Métricas
+		lineageTag: 51ed574a-a850-4e88-9ca4-db2db1258638
+		summarizeBy: sum
+		sourceColumn: costo_total
+
+	column margen
+		dataType: double
+		formatString: $#,##0.00
+		displayFolder: Métricas
+		lineageTag: 3b981838-60a8-4101-b310-0b66eaff1d7d
+		summarizeBy: sum
+		sourceColumn: margen
+
+	column margen_pct
+		dataType: double
+		formatString: 0.00
+		displayFolder: Métricas
+		lineageTag: 14ff2687-a7f7-44a5-be0b-3dfa82146818
+		summarizeBy: none
+		sourceColumn: margen_pct
+
+	column order_date
+		dataType: dateTime
+		formatString: dd/MM/yyyy
+		displayFolder: Fechas
+		lineageTag: 3b453ef7-a881-49d7-8512-8b83e06ebb8c
+		summarizeBy: none
+		sourceColumn: order_date
+
+	column required_date
+		dataType: dateTime
+		isHidden
+		formatString: dd/MM/yyyy
+		displayFolder: Fechas
+		lineageTag: b5349626-85bb-43be-bd76-405fe46cbbc0
+		summarizeBy: none
+		sourceColumn: required_date
+
+	column shipped_date
+		dataType: dateTime
+		formatString: dd/MM/yyyy
+		displayFolder: Fechas
+		lineageTag: 5a81dc14-345e-4bd7-99dc-427e9a393c29
+		summarizeBy: none
+		sourceColumn: shipped_date
+
+	column dias_entrega
+		dataType: int64
+		formatString: #,##0
+		displayFolder: Métricas
+		lineageTag: aed371c5-7f8d-42ab-acd0-667f7b45f80c
+		summarizeBy: none
+		sourceColumn: dias_entrega
+
+	column entrega_puntual
+		dataType: boolean
+		displayFolder: Métricas
+		lineageTag: 07927a47-12f4-4186-8260-f2a6ee3efe95
+		summarizeBy: none
+		sourceColumn: entrega_puntual
+
+	partition fact_ventas-m = m
+		mode: import
+		source =
+				let
+				    Source      = Sql.Database("(localdb)\\MSSQLLocalDB", "Northwind"),
+				    Orders      = Source{[Schema="dbo", Item="Orders"]}[Data],
+				    OrderDetails= Source{[Schema="dbo", Item="Order Details"]}[Data],
+				    OrdSel = Table.SelectColumns(Orders, {
+				        "OrderID", "CustomerID", "EmployeeID",
+				        "OrderDate", "RequiredDate", "ShippedDate",
+				        "ShipVia", "Freight", "ShipCountry", "ShipRegion"
+				    }),
+				    ODSel = Table.SelectColumns(OrderDetails, {
+				        "OrderID", "ProductID", "UnitPrice", "Quantity", "Discount"
+				    }),
+				    Joined = Table.NestedJoin(
+				        ODSel, "OrderID",
+				        OrdSel, "OrderID",
+				        "OrdData", JoinKind.Inner
+				    ),
+				    Exp = Table.ExpandTableColumn(Joined, "OrdData", {
+				        "CustomerID", "EmployeeID", "OrderDate", "RequiredDate",
+				        "ShippedDate", "ShipVia", "Freight", "ShipCountry", "ShipRegion"
+				    }),
+				    Subtotal    = Table.AddColumn(Exp, "subtotal",
+				        each [UnitPrice] * [Quantity], type number),
+				    TotalVenta  = Table.AddColumn(Subtotal, "total_venta",
+				        each [subtotal] * (1 - [Discount]), type number),
+				    CostoUnit   = Table.AddColumn(TotalVenta, "costo_adquisicion_unit",
+				        each [UnitPrice] * 0.60, type number),
+				    CostoTotal  = Table.AddColumn(CostoUnit, "costo_total",
+				        each [costo_adquisicion_unit] * [Quantity], type number),
+				    Margen      = Table.AddColumn(CostoTotal, "margen",
+				        each [total_venta] - [costo_total], type number),
+				    MargenPct   = Table.AddColumn(Margen, "margen_pct",
+				        each if [total_venta] = 0 then 0 else [margen] / [total_venta] * 100, type number),
+				    DiasEntrega = Table.AddColumn(MargenPct, "dias_entrega",
+				        each if [ShippedDate] = null then null
+				             else Duration.Days([ShippedDate] - [OrderDate]),
+				        type number),
+				    EntPuntual  = Table.AddColumn(DiasEntrega, "entrega_puntual",
+				        each if [ShippedDate] = null then null
+				             else [ShippedDate] <= [RequiredDate],
+				        type logical),
+				    FechaId     = Table.AddColumn(EntPuntual, "fecha_id",
+				        each if [OrderDate] = null then null
+				             else Date.ToText([OrderDate], "yyyyMMdd"),
+				        type text),
+				    FechaEntId  = Table.AddColumn(FechaId, "fecha_entrega_id",
+				        each if [ShippedDate] = null then null
+				             else Date.ToText([ShippedDate], "yyyyMMdd"),
+				        type text),
+				    DetailId    = Table.AddColumn(FechaEntId, "order_detail_id",
+				        each Text.From([OrderID]) & "-" & Text.From([ProductID]),
+				        type text),
+				    ShipCntry   = Table.AddColumn(DetailId, "ship_country_safe",
+				        each if [ShipCountry] = null then "UNK" else [ShipCountry],
+				        type text),
+				    ShipReg     = Table.AddColumn(ShipCntry, "ship_region_safe",
+				        each if [ShipRegion] = null then "XX" else [ShipRegion],
+				        type text),
+				    TerrId      = Table.AddColumn(ShipReg, "territorio_id",
+				        each Text.Upper(Text.Start([ship_country_safe], 3)) & "-" &
+				             Text.Upper(Text.Start([ship_region_safe], 2)),
+				        type text),
+				    Round2 = Table.TransformColumns(TerrId, {
+				        {"subtotal",    each Number.Round(_, 2), type number},
+				        {"total_venta", each Number.Round(_, 2), type number},
+				        {"costo_total", each Number.Round(_, 2), type number},
+				        {"margen",      each Number.Round(_, 2), type number},
+				        {"margen_pct",  each Number.Round(_, 2), type number},
+				        {"Freight",     each Number.Round(_, 2), type number}
+				    }),
+				    Final = Table.RenameColumns(Round2, {
+				        {"OrderID",     "order_id"},
+				        {"CustomerID",  "cliente_id"},
+				        {"EmployeeID",  "empleado_id"},
+				        {"ProductID",   "producto_id"},
+				        {"ShipVia",     "shipper_id"},
+				        {"UnitPrice",   "unit_price"},
+				        {"Quantity",    "cantidad"},
+				        {"Discount",    "descuento"},
+				        {"Freight",     "freight"},
+				        {"OrderDate",   "order_date"},
+				        {"RequiredDate","required_date"},
+				        {"ShippedDate", "shipped_date"}
+				    }),
+				    Columnas = Table.SelectColumns(Final, {
+				        "order_detail_id", "order_id",
+				        "fecha_id", "fecha_entrega_id",
+				        "cliente_id", "empleado_id", "producto_id",
+				        "shipper_id", "territorio_id",
+				        "cantidad", "unit_price", "descuento", "freight",
+				        "subtotal", "total_venta",
+				        "costo_total", "margen", "margen_pct",
+				        "order_date", "required_date", "shipped_date",
+				        "dias_entrega", "entrega_puntual"
+				    })
+				in
+				    Columnas
+

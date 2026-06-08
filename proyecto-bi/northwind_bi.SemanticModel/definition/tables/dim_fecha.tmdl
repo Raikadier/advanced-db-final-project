@@ -1,0 +1,114 @@
+/// ============================================================
+/// DIMENSIÓN: dim_fecha
+/// Fuente: csvs/dim_fecha.csv (672 días Jul 1996 → May 1998)
+/// Responde: P1 (ventas por periodo), P10 (estacionalidad)
+/// ============================================================
+table dim_fecha
+	isHidden
+	lineageTag: cba37add-12ec-4a28-a5b1-1f42629f5611
+
+	column fecha_id
+		dataType: string
+		isKey
+		displayFolder: Claves
+		lineageTag: 09c4c446-e3f2-429f-8c6f-5849d4324f8d
+		summarizeBy: none
+		sourceColumn: fecha_id
+
+	column fecha_completa
+		dataType: dateTime
+		formatString: dd/MM/yyyy
+		lineageTag: 781a2d89-c8ef-4214-8239-1464ba494bf2
+		summarizeBy: none
+		sourceColumn: fecha_completa
+
+	column anio
+		dataType: int64
+		lineageTag: 02155f81-16c6-4728-8723-b693b8e293d1
+		summarizeBy: none
+		sourceColumn: anio
+
+	column trimestre
+		dataType: int64
+		lineageTag: 0620f94c-46de-452c-a2c8-143f13612b32
+		summarizeBy: none
+		sourceColumn: trimestre
+
+	column mes
+		dataType: int64
+		lineageTag: cf807fe6-a13f-454a-bb53-fb8b1cbe9c44
+		summarizeBy: none
+		sourceColumn: mes
+
+	column nombre_mes
+		dataType: string
+		lineageTag: 2f08b636-e2d0-44e9-8570-74cea4c4ad54
+		summarizeBy: none
+		sourceColumn: nombre_mes
+		sortByColumn: mes
+
+	column semana_anio
+		dataType: int64
+		lineageTag: 03ed1341-d85c-497a-be67-b878f253568b
+		summarizeBy: none
+		sourceColumn: semana_anio
+
+	column dia
+		dataType: int64
+		lineageTag: b8da2afe-7933-4be6-8a74-0872de1a3272
+		summarizeBy: none
+		sourceColumn: dia
+
+	column nombre_dia
+		dataType: string
+		lineageTag: e3e4ed77-98e5-4cfe-9578-fb1e93796792
+		summarizeBy: none
+		sourceColumn: nombre_dia
+
+	column es_fin_semana
+		dataType: boolean
+		lineageTag: 476d72ef-b4b7-4391-acb9-aa4e6119748a
+		summarizeBy: none
+		sourceColumn: es_fin_semana
+
+	hierarchy 'Jerarquía Temporal'
+		lineageTag: 07e2d991-88ad-4f1a-9296-409efc544337
+
+		level Año
+			lineageTag: 4c838301-a2bc-4014-a9b6-3901b62c2750
+			column: anio
+
+		level Trimestre
+			lineageTag: e5f47f25-c7d8-4ce7-ab84-405851784351
+			column: trimestre
+
+		level Mes
+			lineageTag: 909c918a-1d2f-4e5a-9d81-978ef2c401f8
+			column: nombre_mes
+
+		level Día
+			lineageTag: abdcd1b3-9161-4c5f-b674-3b49ae5e0944
+			column: dia
+
+	partition dim_fecha-m = m
+		mode: import
+		source =
+				let
+				    Source  = Csv.Document(File.Contents("D:\\Github repos\\advanced-db-final-project\\csvs\\dim_fecha.csv"),
+				                [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed   = Table.TransformColumnTypes(Headers, {
+				        {"fecha_id",    type text},
+				        {"fecha_completa", type date},
+				        {"anio",        Int64.Type},
+				        {"trimestre",   Int64.Type},
+				        {"mes",         Int64.Type},
+				        {"nombre_mes",  type text},
+				        {"semana_anio", Int64.Type},
+				        {"dia",         Int64.Type},
+				        {"nombre_dia",  type text},
+				        {"es_fin_semana", type logical}
+				    })
+				in
+				    Typed
+

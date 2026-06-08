@@ -1,0 +1,59 @@
+/// ============================================================
+/// DIMENSIÓN: dim_metas_empleado
+/// Tabla calculada DAX — metas de ventas trimestrales por cargo
+/// Responde: P5 (eficiencia vs. metas)
+/// ============================================================
+table dim_metas_empleado
+	isHidden
+	lineageTag: d087d4a1-f050-4de9-8ffc-da1a83eb4b89
+
+	column empleado_id
+		dataType: int64
+		isKey
+		displayFolder: Claves
+		lineageTag: d306511b-04f2-41bb-9226-0bd9bd410063
+		summarizeBy: none
+		sourceColumn: empleado_id
+
+	column anio
+		dataType: int64
+		lineageTag: 1d52c44f-1a4a-4ddc-8d34-34ca0e9b793f
+		summarizeBy: none
+		sourceColumn: anio
+
+	column trimestre
+		dataType: int64
+		lineageTag: ab612421-2779-4af5-90fd-ab530f6f88fd
+		summarizeBy: none
+		sourceColumn: trimestre
+
+	column meta_ventas_usd
+		dataType: double
+		formatString: $#,##0.00
+		lineageTag: f0f63596-53aa-4e4a-9188-52a1cf972996
+		summarizeBy: sum
+		sourceColumn: meta_ventas_usd
+
+	column categoria_meta
+		dataType: string
+		lineageTag: e0e4c938-c35b-48b2-a8c6-f73a76c8961d
+		summarizeBy: none
+		sourceColumn: categoria_meta
+
+	partition dim_metas_empleado-m = m
+		mode: import
+		source =
+				let
+				    Source  = Csv.Document(File.Contents("D:\\Github repos\\advanced-db-final-project\\csvs\\dim_metas_empleado.csv"),
+				                [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.None]),
+				    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    Typed   = Table.TransformColumnTypes(Headers, {
+				        {"empleado_id",      Int64.Type},
+				        {"anio",             Int64.Type},
+				        {"trimestre",        Int64.Type},
+				        {"meta_ventas_usd",  type number},
+				        {"categoria_meta",   type text}
+				    })
+				in
+				    Typed
+

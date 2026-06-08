@@ -9,7 +9,8 @@ venv/
 
 # ── ETL logs ─────────────────────────────────────────────────────
 *.log
-ETL_Base_ded_datos/**/*.log
+etl/logs/
+etl/**/*.log
 
 # ── Power BI Desktop (cache y configuración local) ───────────────
 **/.pbi/cache.abf

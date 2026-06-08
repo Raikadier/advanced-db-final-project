@@ -1,841 +1,1748 @@
 # Proyecto BI — Northwind Traders
-### Base de Datos Avanzadas · Universidad Popular del Cesar
+
+**Base de Datos Avanzadas · Universidad Popular del Cesar · 2026-1**
+
+| | |
+|---|---|
+| **Asignatura** | Base de Datos Avanzadas |
+| **Dataset** | Microsoft Northwind Traders (jul 1996 — may 1998) |
+| **Stack objetivo** | Supabase (OLTP + Staging) · MongoDB Atlas · Python ETL · Power BI PBIP |
+| **Preguntas de negocio** | 10 (P1–P10) |
+| **Repositorio** | [advanced-db-final-project](https://github.com/Raikadier/advanced-db-final-project) |
 
 [![Python](https://img.shields.io/badge/ETL-Python_3.x-3776AB?style=flat&logo=python)](https://python.org)
-[![MongoDB](https://img.shields.io/badge/DW-MongoDB-47A248?style=flat&logo=mongodb)](https://mongodb.com)
+[![Supabase](https://img.shields.io/badge/OLTP%20%2B%20Staging-Supabase-3FCF8E?style=flat&logo=supabase)](https://supabase.com)
+[![MongoDB](https://img.shields.io/badge/DW-MongoDB_Atlas-47A248?style=flat&logo=mongodb)](https://mongodb.com)
 [![Power BI](https://img.shields.io/badge/BI-Power_BI_PBIP-F2C811?style=flat&logo=powerbi)](https://powerbi.microsoft.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## Tabla de Contenidos
+## Índice
 
-1. [Resumen del Proyecto](#1-resumen-del-proyecto)
-2. [Arquitectura del Sistema](#2-arquitectura-del-sistema)
-3. [Stack Tecnológico](#3-stack-tecnológico)
-4. [Estructura del Repositorio](#4-estructura-del-repositorio)
-5. [Preguntas de Negocio](#5-preguntas-de-negocio)
-6. [Fase 1 — Análisis Funcional](#6-fase-1--análisis-funcional)
-7. [Fase 2 — ETL Python](#7-fase-2--etl-python)
-8. [Fase 3 — Data Warehouse MongoDB](#8-fase-3--data-warehouse-mongodb)
-9. [Fase 4 — Power BI (TMDL/PBIR)](#9-fase-4--power-bi-tmdlpbir)
-10. [Generación de CSV sin infraestructura](#10-generación-de-csv-sin-infraestructura)
-11. [Modelo Dimensional (Esquema Estrella)](#11-modelo-dimensional-esquema-estrella)
-12. [Medidas DAX implementadas](#12-medidas-dax-implementadas)
-13. [Diseño de las Visualizaciones](#13-diseño-de-las-visualizaciones)
-14. [Errores Corregidos (Auditoría)](#14-errores-corregidos-auditoría)
-15. [Prerrequisitos e Instalación](#15-prerrequisitos-e-instalación)
-16. [Guía de Ejecución por Fase](#16-guía-de-ejecución-por-fase)
-17. [Independencia entre Fases](#17-independencia-entre-fases)
-18. [Punto Extra — Tabular SSAS](#18-punto-extra--tabular-ssas)
-19. [Estado del Proyecto](#19-estado-del-proyecto)
+### General
+- [Resumen](#resumen)
+- [Equipo y roles](#equipo-y-roles)
+- [Preguntas de negocio (P1–P10)](#preguntas-de-negocio-p1p10)
+
+### Arquitectura y decisiones
+- [Arquitectura objetivo (cloud)](#arquitectura-objetivo-cloud)
+- [Arquitectura legacy (referencia local)](#arquitectura-legacy-referencia-local)
+- [Registro de decisiones de diseño](#registro-de-decisiones-de-diseño)
+- [Stack tecnológico](#stack-tecnológico)
+
+### Configuración paso a paso
+- [Supabase — Proyecto fuente (`northwind-oltp`)](#supabase--proyecto-fuente-northwind-oltp)
+- [Supabase — Proyecto staging (`northwind-staging`)](#supabase--proyecto-staging-northwind-staging)
+- [MongoDB Atlas — Data Warehouse](#mongodb-atlas--data-warehouse)
+- [Cursor — MCP Supabase](#cursor--mcp-supabase)
+- [Variables de entorno (`.env`)](#variables-de-entorno-env)
+- [Programación del ETL en tu PC (Task Scheduler)](#programación-del-etl-en-tu-pc-task-scheduler)
+
+### ETL (guía en profundidad — estudio y sustentación)
+- [ETL — Cómo leer esta guía](#etl--cómo-leer-esta-guía)
+- [ETL — Visión ejecutiva (30 segundos)](#etl--visión-ejecutiva-30-segundos)
+- [ETL — Fundamentos teóricos](#etl--fundamentos-teóricos)
+- [ETL — Arquitectura de dos fases](#etl--arquitectura-de-dos-fases)
+- [ETL — Diagrama de secuencia](#etl--diagrama-de-secuencia)
+- [ETL — Línea de datos (lineage)](#etl--línea-de-datos-lineage)
+- [ETL — Flujo en lenguaje simple](#etl--flujo-en-lenguaje-simple)
+- [ETL — Catálogo de transformaciones (TR-xxx)](#etl--catálogo-de-transformaciones-tr-xxx)
+- [ETL — Catálogo de calidad (RQ-xxx)](#etl--catálogo-de-calidad-rq-xxx)
+- [ETL — Esquema staging (`stg_*`)](#etl--esquema-staging-stg_)
+- [ETL — Modelo DW (colecciones MongoDB)](#etl--modelo-dw-colecciones-mongodb)
+- [ETL — Estructura de archivos](#etl--estructura-de-archivos)
+- [ETL — `pipeline.py`](#etl--pipelinepy)
+- [ETL — `config.py`](#etl--configpy)
+- [ETL — `db_connection.py`](#etl--db_connectionpy)
+- [ETL — `bootstrap.py`](#etl--bootstrappy)
+- [ETL — `extract.py`](#etl--extractpy)
+- [ETL — `transform.py`](#etl--transformpy)
+- [ETL — `validate.py`](#etl--validatepy)
+- [ETL — `load_staging.py`](#etl--load_stagingpy)
+- [ETL — `load_dw.py`](#etl--load_dwpy)
+- [ETL — `etl_meta.py`](#etl--etl_metapy)
+- [ETL — `logger_setup.py`](#etl--logger_setuppy)
+- [ETL — Scripts SQL](#etl--scripts-sql)
+- [ETL — Ejecución y automatización](#etl--ejecución-y-automatización)
+- [ETL — Métricas verificadas (último run)](#etl--métricas-verificadas-último-run)
+- [ETL — Cómo explicarlo en la sustentación](#etl--cómo-explicarlo-en-la-sustentación)
+- [ETL — Solución de problemas](#etl--solución-de-problemas)
+
+### Datos y modelo
+- [Modelo dimensional (esquema estrella)](#modelo-dimensional-esquema-estrella)
+- [Colecciones MongoDB](#colecciones-mongodb)
+- [Medidas DAX](#medidas-dax)
+- [Diseño de visualizaciones](#diseño-de-visualizaciones)
+
+### Power BI
+- [Proyecto PBIP / TMDL / PBIR](#proyecto-pbip--tmdl--pbir)
+- [Páginas del reporte](#páginas-del-reporte)
+
+### Operación y respaldo
+- [Plan B — CSV sin infraestructura](#plan-b--csv-sin-infraestructura)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Guía de ejecución rápida](#guía-de-ejecución-rápida)
+- [Errores corregidos (auditoría)](#errores-corregidos-auditoría)
+- [Punto extra — Tabular SSAS](#punto-extra--tabular-ssas)
+- [Estado del proyecto](#estado-del-proyecto)
 
 ---
 
-## 1. Resumen del Proyecto
+## Resumen
 
-Proyecto de Business Intelligence sobre la base de datos **Northwind Traders** de Microsoft, con datos históricos de ventas del período **julio 1996 — mayo 1998**.
+Proyecto de **Business Intelligence** sobre **Northwind Traders**. El pipeline transforma datos operacionales (OLTP) en un **Data Warehouse dimensional** en MongoDB, consumido por **Power BI**, respondiendo **10 preguntas de negocio** con dashboards interactivos.
 
-El pipeline completo transforma datos relacionales de un sistema OLTP en un **Data Warehouse dimensional** accesible desde Power BI, respondiendo 10 preguntas de negocio con dashboards interactivos.
+La **arquitectura objetivo** desacopla las capas en la nube: dos proyectos **Supabase** (fuente y staging), **MongoDB Atlas** como DW, y un **ETL Python ejecutado en el PC del desarrollador** que orquesta todo el ciclo. Power BI se actualiza contra el DW remoto (modo Import con refresh).
 
-### Equipo y Roles
+> Ver también: [Arquitectura objetivo](#arquitectura-objetivo-cloud) · [Registro de decisiones](#registro-de-decisiones-de-diseño) · [Guía del ETL](#etl--visión-general)
+
+---
+
+## Equipo y roles
 
 | Rol | Responsabilidad |
 |-----|-----------------|
-| **Análisis Funcional** | Diseño del modelo dimensional, 10 preguntas de negocio, diccionario de datos |
-| **ETL Python** | Pipeline de extracción, transformación y carga desde Northwind → Staging |
-| **MongoDB DW** | Diseño e implementación del Data Warehouse NoSQL |
-| **Power BI** | Modelo semántico TMDL, dashboards PBIR, validación y control de calidad |
+| **Análisis funcional** | Modelo dimensional, P1–P10, diccionario de datos |
+| **ETL Python** | Pipeline fuente → staging → DW |
+| **MongoDB DW** | Colecciones `dim_*` / `fact_*` en Atlas |
+| **Power BI** | Modelo TMDL, reporte PBIR, validación |
 
 ---
 
-## 2. Arquitectura del Sistema
+## Preguntas de negocio (P1–P10)
 
-```
-┌──────────────┐     FASE 2          ┌──────────────┐     FASE 3          ┌──────────────┐
-│  Northwind   │  ─────────────────► │   Staging    │  ─────────────────► │  MongoDB DW  │
-│  SQL Server  │   ETL Python        │  SQL Server  │  northwind_sql_to   │  northwind_dw│
-│  (fuente)    │   pipeline.py       │  northwind_  │  _mongodb.py        │  7 colecciones│
-│  ~830 orders │                     │  staging     │                      │  ~2155 facts  │
-└──────────────┘                     └──────────────┘                      └──────┬───────┘
-                                                                                  │
-                                                                         FASE 4   │ Import Mode
-                                                                                  ▼
-                                                                         ┌──────────────┐
-                                                                         │  Power BI    │
-                                                                         │  .pbip       │
-                                                                         │  TMDL + PBIR │
-                                                                         │  4 páginas   │
-                                                                         │  22 medidas  │
-                                                                         └──────────────┘
-```
-
-> **Nota importante:** Con **Import Mode** en Power BI, los datos se embeben en el `.pbip` tras una sola actualización. Después de eso, **no es necesario que ningún servidor esté corriendo** para ver los dashboards. El reporte es autocontenido.
-
-### Alternativa sin infraestructura
-
-Si no tienes MongoDB ni SQL Server disponibles, el script `generate_csvs.py` (incluido en este repositorio) lee directamente el archivo `northwind.sql` y genera los 8 CSV necesarios para Power BI en segundos, **sin instalar ningún servidor**.
-
----
-
-## 3. Stack Tecnológico
-
-| Componente | Tecnología | Versión |
-|---|---|---|
-| Fuente de datos | Microsoft Northwind (SQL Server LocalDB) | SQL Server 2019+ |
-| ETL | Python + pandas + SQLAlchemy + pyodbc | Python 3.x |
-| Staging | SQL Server LocalDB | `northwind_staging` |
-| Data Warehouse | MongoDB Community | `northwind_dw` |
-| Visualización | Power BI Desktop (PBIP format) | Mayo 2026 |
-| Modelo semántico | TMDL (Tabular Model Definition Language) | v1600 |
-| Formato reporte | PBIR (Power BI Enhanced Report Format) | v3.3.0 |
-| Control de versiones | Git + GitHub | — |
-
----
-
-## 4. Estructura del Repositorio
-
-```
-advanced-db-final-project/
-│
-├── 📁 ETL_Base_ded_datos/                    # FASE 2 — Pipeline ETL
-│   ├── northwind_etl_python/
-│   │   └── northwind_etl/
-│   │       ├── etl/
-│   │       │   ├── config.py                 # Configuración conexiones y tablas
-│   │       │   ├── extract.py                # Queries SQL de extracción (11 tablas)
-│   │       │   ├── transform.py              # 14 transformaciones TR-001 a TR-014
-│   │       │   ├── validate.py               # Reglas de calidad RQ-001 a RQ-022
-│   │       │   ├── load.py                   # Carga por batch al staging
-│   │       │   ├── db_connection.py          # Factory de conexiones SQLAlchemy
-│   │       │   └── logger_setup.py           # Logging rotativo a archivo + consola
-│   │       ├── pipeline.py                   # Orquestador principal del ETL
-│   │       ├── requirements.txt              # Dependencias Python
-│   │       └── sql/
-│   │           └── create_staging.sql        # DDL del staging (MySQL/SQL Server)
-│   └── scripteado/
-│       ├── northwind.sql                     # Base de datos fuente completa (2MB)
-│       └── Northwind_staging.sql             # Script staging para SQL Server
-│
-├── 📁 entreega preeparada/                   # FASE 3 — MongoDB DW
-│   └── entreega preeparada/
-│       ├── northwind_sql_to_mongodb.py       # Cargador del DW (lee del staging)
-│       ├── northwind_dw_mongodb.js           # Schema mongosh + queries de validación
-│       ├── Modelo_Dimensional_MongoDB_Northwind.docx
-│       └── read me.txt                       # Instrucciones de ejecución
-│
-├── 📁 proyecto-bi/                           # FASE 4 — Power BI PBIP
-│   ├── northwind_bi.pbip                     # Punto de entrada del proyecto
-│   ├── northwind_bi.Report/                  # Definición del reporte (PBIR)
-│   │   ├── definition.pbir                   # Referencia al SemanticModel
-│   │   ├── StaticResources/SharedResources/
-│   │   │   ├── BaseThemes/CY26SU05.json      # Tema base Microsoft
-│   │   │   └── CustomThemes/BIBB.json        # Tema corporativo BIBB.PRO v2.05
-│   │   └── definition/
-│   │       ├── report.json                   # Config global + tema inyectado
-│   │       ├── version.json
-│   │       └── pages/
-│   │           ├── pages.json                # Orden de las 4 páginas
-│   │           ├── e3e43335c708953e4407/     # Página 1: Resumen Ejecutivo
-│   │           ├── d72257249741148631d0/     # Página 2: Clientes y Geografía
-│   │           ├── d9ff3d19e960c247b7bd/     # Página 3: Operaciones y Logística
-│   │           └── ad7a10cd5c1f2cdd218f/     # Página 4: Desempeño y Auditoría
-│   └── northwind_bi.SemanticModel/           # Modelo semántico (TMDL)
-│       ├── definition.pbism
-│       └── definition/
-│           ├── database.tmdl                 # compatibilityLevel: 1600
-│           ├── model.tmdl                    # 8 tablas + 22 medidas + 7 relaciones
-│           └── cultures/es-CO.tmdl
-│
-├── 📁 csvs/                                  # CSV del DW (generados automáticamente)
-│   ├── fact_ventas.csv                       # 2155 filas — tabla de hechos principal
-│   ├── dim_fecha.csv                         # 672 filas — 1996-07-04 → 1998-05-06
-│   ├── dim_cliente.csv                       # 91 filas
-│   ├── dim_empleado.csv                      # 9 filas
-│   ├── dim_producto.csv                      # 77 filas
-│   ├── dim_shipper.csv                       # 3 filas
-│   ├── dim_territorio.csv                    # 69 filas
-│   └── dim_metas_empleado.csv                # 108 filas (9 emp × 3 años × 4 trim)
-│
-├── generate_csvs.py                          # ⚡ Genera todos los CSV desde northwind.sql
-├── verify_csvs.py                            # ✅ Valida integridad de los CSV
-├── Diccionario_Datos_Northwind_BI.xlsx       # Diccionario de campos y reglas de calidad
-├── Entregable1_Analisis_Northwind.docx       # Análisis funcional Fase 1
-├── Reporte_Errores_Corregidos.docx           # Auditoría técnica del proyecto
-├── Power BI Theme by BIBB.json               # Tema visual corporativo
-├── prompt_fase1_analisis.txt                 # Guía de correcciones para Fase 1
-├── prompt_fase2_etl.txt                      # Guía de correcciones para Fase 2
-├── prompt_fase3_mongodb.txt                  # Guía de correcciones para Fase 3
-├── prompt_fase4_powerbi.txt                  # Guía de desarrollo para Fase 4
-├── .gitignore
-└── README.md
-```
-
----
-
-## 5. Preguntas de Negocio
-
-El proyecto responde las siguientes 10 preguntas, cada una implementada como medidas DAX y visualizaciones específicas:
-
-| # | Pregunta | Página del Dashboard |
-|---|---|---|
+| # | Pregunta | Página del dashboard |
+|---|----------|----------------------|
 | **P1** | ¿Cómo han evolucionado las ventas por mes y año? | Resumen Ejecutivo |
-| **P2** | ¿Cuáles son los 10 clientes que más ingresos generan y cómo ha variado su comportamiento? | Clientes y Geografía |
-| **P3** | ¿Cuáles son los productos con mayor volumen y su contribución al total de ingresos? | Productos y Categorías |
-| **P4** | ¿Qué categorías generan mayores ingresos y cuál es su tendencia histórica? | Productos y Categorías |
-| **P5** | ¿Qué empleados logran mayor facturación y cuál es su tasa de cumplimiento vs. metas? | Desempeño y Auditoría |
-| **P6** | ¿Qué regiones/países generan más ingresos y cuáles tienen oportunidades de crecimiento? | Clientes y Geografía |
-| **P7** | ¿Cuál es el tiempo promedio de entrega y cómo varía por región o transportista? | Operaciones y Logística |
-| **P8** | ¿Cuál es la rentabilidad por producto y cómo contribuye a la utilidad total? | Desempeño y Auditoría |
-| **P9** | ¿Qué clientes han dejado de comprar y qué impacto tiene en las ventas? | Clientes y Geografía |
-| **P10** | ¿Existen patrones estacionales en las ventas y cómo afectan el inventario? | Resumen Ejecutivo |
+| **P2** | ¿Top 10 clientes y su comportamiento en el tiempo? | Clientes y Geografía |
+| **P3** | ¿Productos con mayor volumen y contribución? | Operaciones y Logística |
+| **P4** | ¿Categorías con mayores ingresos y tendencia? | Operaciones y Logística |
+| **P5** | ¿Empleados vs. metas de ventas? | Desempeño y Auditoría |
+| **P6** | ¿Regiones/países con más ingresos? | Clientes y Geografía |
+| **P7** | ¿Tiempos de entrega por región/transportista? | Operaciones y Logística |
+| **P8** | ¿Rentabilidad por producto? | Desempeño y Auditoría |
+| **P9** | ¿Clientes inactivos e impacto? | Clientes y Geografía |
+| **P10** | ¿Patrones estacionales? | Resumen Ejecutivo |
 
 ---
 
-## 6. Fase 1 — Análisis Funcional
+## Arquitectura objetivo (cloud)
 
-### Modelo Dimensional — Esquema Estrella
-
-El diseño sigue el patrón **Star Schema** con una tabla de hechos central y 7 dimensiones:
+Arquitectura acordada para el proyecto en producción académica. El ETL corre **en el PC del desarrollador** (no en la nube).
 
 ```
-                    dim_fecha ◄───────────────────────────────────────┐
-                        │                                              │
-                    dim_cliente ◄─────────────────────────────────┐   │
-                        │                                          │   │
-dim_metas_empleado ─► dim_empleado ◄───────────────────────────┐  │   │
-                        │                                       │  │   │
-                    dim_producto ◄──────────────────────────┐   │  │   │
-                        │                                   │   │  │   │
-                    dim_shipper ◄───────────────────────┐   │   │  │   │
-                        │                               │   │   │  │   │
-                    dim_territorio ◄─────────────────┐  │   │   │  │   │
-                                                     │  │   │   │  │   │
-                                              ┌──────▼──▼───▼───▼──▼───▼──────┐
-                                              │         fact_ventas            │
-                                              │  order_detail_id  (PK)        │
-                                              │  order_id                     │
-                                              │  fecha_id         (FK)        │
-                                              │  fecha_entrega_id (FK, inact) │
-                                              │  cliente_id       (FK)        │
-                                              │  empleado_id      (FK)        │
-                                              │  producto_id      (FK)        │
-                                              │  shipper_id       (FK)        │
-                                              │  territorio_id    (FK)        │
-                                              │  cantidad, unit_price         │
-                                              │  descuento, freight           │
-                                              │  subtotal, total_venta        │
-                                              │  costo_total, margen          │
-                                              │  margen_pct                   │
-                                              │  dias_entrega                 │
-                                              │  entrega_puntual              │
-                                              └────────────────────────────────┘
+┌─────────────────────────┐
+│ Supabase Proyecto 1     │  northwind-oltp
+│ PostgreSQL — Fuente     │  Tablas Northwind OLTP
+│ ref: svrxnmbagwumyogxdlfu
+└───────────┬─────────────┘
+            │  EXTRACT (Fase A)
+            ▼
+┌─────────────────────────┐
+│ Tu PC — Python ETL      │  pipeline.py (en evolución)
+│ transform + validate    │
+└───────────┬─────────────┘
+            │  LOAD staging
+            ▼
+┌─────────────────────────┐
+│ Supabase Proyecto 2     │  northwind-staging
+│ PostgreSQL — Staging    │  STG_* + etl_runs
+│ ref: crvyesiaqbqkqaslflya
+└───────────┬─────────────┘
+            │  LOAD DW (Fase B)
+            ▼
+┌─────────────────────────┐
+│ MongoDB Atlas           │  northwind_dw
+│ 8 colecciones dim/fact  │
+└───────────┬─────────────┘
+            │  Import / Refresh
+            ▼
+┌─────────────────────────┐
+│ Power BI (.pbip)        │  TMDL + PBIR — 4 páginas
+└─────────────────────────┘
 ```
 
-### Supuesto de negocio documentado
+**URLs de API (referencia):**
 
-> **Northwind no tiene costos de adquisición reales.** Se utiliza la siguiente aproximación documentada:
-> ```
-> costo_adquisicion = UnitPrice_historico × 0.60
-> costo_total       = cantidad × costo_adquisicion
-> margen            = total_venta − costo_total
-> margen_pct        = (margen / total_venta) × 100
-> ```
+| Proyecto | Rol | URL |
+|----------|-----|-----|
+| `svrxnmbagwumyogxdlfu` | Fuente OLTP | `https://svrxnmbagwumyogxdlfu.supabase.co` |
+| `crvyesiaqbqkqaslflya` | Staging | `https://crvyesiaqbqkqaslflya.supabase.co` |
 
-### dim_metas_empleado (tabla auxiliar — no existe en Northwind)
+---
 
-Para responder P5, se creó una tabla de metas trimestrales por cargo:
+## Arquitectura legacy (referencia local)
 
-| Cargo | Meta por trimestre |
-|---|---|
+Implementación original del repositorio (SQL Server LocalDB + MongoDB local). Se mantiene como referencia y plan B.
+
+```
+Northwind (SQL Server LocalDB)
+    → ETL Python (pipeline.py)
+    → northwind_staging (LocalDB)
+    → northwind_sql_to_mongodb.py
+    → MongoDB local (localhost:27017)
+    → Power BI (Import / CSV)
+```
+
+> La migración a la arquitectura objetivo **reutiliza** el código ETL existente; no requiere reescribirlo desde cero. Ver [ETL — Flujo en lenguaje simple](#etl--flujo-en-lenguaje-simple).
+
+---
+
+## Registro de decisiones de diseño
+
+Documento vivo: cada decisión relevante se registra aquí con fecha y motivo.
+
+| Fecha | Decisión | Motivo | Estado |
+|-------|----------|--------|--------|
+| 2026-06 | **Dos proyectos Supabase separados** (fuente + staging), no un solo proyecto con schemas | Aislamiento OLTP vs landing zone; narrativa profesional de extracción remota | ✅ Acordado |
+| 2026-06 | **ETL en el PC del desarrollador**, no en GitHub Actions | Control local, cron con Task Scheduler, sin exponer fuente | ✅ Acordado |
+| 2026-06 | **DW en MongoDB Atlas** (no MongoDB local en producción) | Acceso remoto; Power BI solo necesita internet para refresh | ✅ Verificado E2E |
+| 2026-06 | **No reescribir ETL** — extender `pipeline.py` + integrar `load_dw` | ~70–80 % del código actual es reutilizable | ✅ Implementado |
+| 2026-06 | **Pipeline unificado** Fase A + B en `pipeline.py` | Un solo comando; full refresh staging + DW | ✅ Implementado |
+| 2026-06 | **Bootstrap staging** en primera ejecución | `bootstrap.py` aplica DDL si faltan tablas | ✅ Implementado |
+| 2026-06 | **`etl_runs` + Task Scheduler** | Auditoría de ejecuciones periódicas | ✅ Implementado (`etl_meta.py`) |
+| 2026-06 | **Carga incremental (`watermark`)** | Optimización futura para volúmenes grandes | 📋 Planeado |
+| 2026-06 | **Plan B: `generate_csvs.py`** | Sustentación sin depender de red o servicios cloud | ✅ Disponible |
+| 2026-06 | **Power BI en Import Mode** | MongoDB no soporta DirectQuery nativo en PBI; Import + refresh programado | ✅ Acordado |
+| 2026-06 | **MCP Supabase en Cursor** (`supabase-oltp` + `supabase-staging`) | Migraciones y DDL asistidas por IA | 🔄 Configurado en `mcp.json` |
+
+*Para añadir una decisión: agregar fila a esta tabla en el mismo PR/commit que implemente el cambio.*
+
+---
+
+## Stack tecnológico
+
+### Objetivo (cloud)
+
+| Capa | Tecnología |
+|------|------------|
+| Fuente OLTP | Supabase PostgreSQL — `northwind-oltp` |
+| Staging | Supabase PostgreSQL — `northwind-staging` |
+| ETL | Python 3.10+ · pandas · SQLAlchemy · psycopg2 · pymongo |
+| DW | MongoDB Atlas — `northwind_dw` |
+| BI | Power BI Desktop PBIP · TMDL · PBIR |
+| Orquestación local | Windows Task Scheduler |
+| IDE / MCP | Cursor + Supabase MCP + Power BI MCP |
+
+### Legacy (local)
+
+| Capa | Tecnología |
+|------|------------|
+| Fuente / Staging | SQL Server LocalDB |
+| DW | MongoDB Community local |
+| ETL | Python + pyodbc |
+
+---
+
+## Supabase — Proyecto fuente (`northwind-oltp`)
+
+**Project ref:** `svrxnmbagwumyogxdlfu`
+
+### Qué aloja
+
+- Base de datos operacional **Northwind** (tablas `Categories`, `Customers`, `Orders`, `Order Details`, etc.)
+- Simula el ERP / sistema transaccional del que el ETL **extrae** datos
+
+### Pasos de configuración
+
+1. Crear proyecto en [supabase.com/dashboard](https://supabase.com/dashboard) → nombre `northwind-oltp`.
+2. Anotar **Project ref** y **Database password**.
+3. Aplicar DDL Northwind adaptado a PostgreSQL (vía MCP `apply_migration` o SQL Editor).
+4. Verificar tablas: `list_tables` en MCP o `\dt` en SQL Editor.
+5. Guardar connection string en `.env` → `SOURCE_DATABASE_URL`.
+
+### Connection string (Session pooler recomendado para ETL)
+
+```
+postgresql://postgres.[ref]:[PASSWORD]@aws-0-[region].pooler.supabase.com:5432/postgres
+```
+
+> Obtener la URL exacta en: **Project Settings → Database → Connection string → URI**.
+
+---
+
+## Supabase — Proyecto staging (`northwind-staging`)
+
+**Project ref:** `crvyesiaqbqkqaslflya`
+
+### Qué aloja
+
+- Tablas **`stg_*`** (landing zone del ETL)
+- Tabla de control **`etl_runs`** (auditoría del pipeline)
+- **No** contiene el modelo dimensional final (eso vive en MongoDB)
+
+### Pasos de configuración
+
+1. Crear proyecto `northwind-staging` en Supabase.
+2. Guardar en `.env` → `STAGING_DATABASE_URL`.
+3. Ejecutar `python pipeline.py` — `bootstrap.py` aplica `northwind_staging_supabase.sql` automáticamente si faltan tablas.
+
+(Opcional manual: pegar `sql/northwind_staging_supabase.sql` en SQL Editor.)
+
+### Tablas staging esperadas
+
+```
+stg_categories, stg_suppliers, stg_shippers, stg_customers,
+stg_employees, stg_region, stg_territories, stg_employee_territories,
+stg_products, stg_orders, stg_order_details, etl_runs
+```
+
+---
+
+## MongoDB Atlas — Data Warehouse
+
+### Qué configuras en Atlas (infraestructura)
+
+Atlas **no define el esquema del DW en la UI**. El ETL crea colecciones al insertar documentos.
+
+| Paso | Acción |
+|------|--------|
+| 1 | Crear cluster (M0 Free suele bastar para el TF) |
+| 2 | **Database Access** → usuario `etl_northwind` (read/write) |
+| 3 | **Network Access** → IP actual del PC de desarrollo |
+| 4 | **Connect → Drivers → Python** → copiar URI `mongodb+srv://...` |
+| 5 | Guardar en `.env` → `MONGO_URI` y `MONGO_DB=northwind_dw` |
+
+### Qué crea el ETL (contenido del DW)
+
+Ver [Colecciones MongoDB](#colecciones-mongodb). Tras la primera carga: `fact_ventas` ≈ **2.155** documentos.
+
+### Verificación rápida
+
+```bash
+pip install pymongo
+python -c "
+from pymongo import MongoClient
+import os
+c = MongoClient(os.environ['MONGO_URI'])
+db = c['northwind_dw']
+print('Colecciones:', db.list_collection_names())
+print('fact_ventas:', db.fact_ventas.count_documents({}))
+"
+```
+
+### Power BI y Atlas
+
+Power BI consume el DW en **modo Import** (refresh manual o programado). No se usa `mongosqld`/ODBC de la arquitectura Docker del compañero — ese patrón es para MongoDB **local**.
+
+---
+
+## Cursor — MCP Supabase
+
+Configuración en `C:\Users\david\.cursor\mcp.json` (dos entradas, una por proyecto):
+
+```json
+"supabase-oltp": {
+  "url": "https://mcp.supabase.com/mcp?project_ref=svrxnmbagwumyogxdlfu"
+},
+"supabase-staging": {
+  "url": "https://mcp.supabase.com/mcp?project_ref=crvyesiaqbqkqaslflya"
+}
+```
+
+### Activación
+
+1. **Cursor → Settings → MCP** → autenticar Supabase (OAuth).
+2. **Reload Window** tras editar `mcp.json`.
+3. Verificar: pedir al agente `list_tables` en cada proyecto.
+
+### Herramientas MCP útiles para este proyecto
+
+| Herramienta | Uso |
+|-------------|-----|
+| `list_tables` | Auditar esquema antes/después de migraciones |
+| `apply_migration` | DDL: Northwind fuente, `STG_*`, `etl_runs` |
+| `execute_sql` | Seeds, consultas de verificación |
+| `get_advisors` | Revisar RLS e índices en Supabase |
+
+---
+
+## Variables de entorno (`.env`)
+
+Archivo **local**, nunca en Git. Crear `.env.example` en el repo como plantilla.
+
+```env
+# ── Supabase Fuente (northwind-oltp) ──
+SOURCE_DATABASE_URL=postgresql://postgres.[ref]:[PASS]@...pooler.supabase.com:5432/postgres
+
+# ── Supabase Staging (northwind-staging) ──
+STAGING_DATABASE_URL=postgresql://postgres.[ref]:[PASS]@...pooler.supabase.com:5432/postgres
+
+# ── MongoDB Atlas ──
+MONGO_URI=mongodb+srv://etl_northwind:[PASS]@....mongodb.net/?retryWrites=true&w=majority
+MONGO_DB=northwind_dw
+
+# ── Control ETL ──
+BATCH_SIZE=500
+TRUNCATE_FIRST=true
+VALIDATE_DATA=true
+LOG_LEVEL=INFO
+```
+
+El módulo [`etl/config.py`](etl/etl/config.py) carga estas variables automáticamente desde la raíz del repo.
+
+---
+
+## Programación del ETL en tu PC (Task Scheduler)
+
+Para demostrar que el pipeline **se actualiza periódicamente** (aunque Northwind sea estático):
+
+| Elemento | Propósito |
+|----------|-----------|
+| **Task Scheduler** | Ejecutar `python pipeline.py` cada 15–30 min |
+| **Tabla `etl_runs`** | Registro de cada ejecución en Supabase staging |
+| **Demo en vivo** | Ejecutar manualmente antes de la sustentación |
+
+### Crear tarea en Windows
+
+1. Abrir **Programador de tareas** → Crear tarea básica.
+2. Desencadenador: cada 30 minutos (documentar: *"equivale a ciclo de negocio de 15 días"*).
+3. Acción: `python.exe` con argumentos `pipeline.py` y directorio de inicio `etl/`.
+4. Verificar en `etl_runs` que el timestamp se actualiza.
+
+> Carga incremental (`watermark.py`) queda como mejora futura; hoy el pipeline usa **full refresh** (ver [ETL — Flujo en lenguaje simple](#etl--flujo-en-lenguaje-simple)).
+
+---
+
+## ETL — Cómo leer esta guía
+
+Esta sección está pensada para que puedas **estudiar el ETL con profundidad** y **explicarlo con lenguaje profesional** en la sustentación. No es solo un manual de ejecución: documenta el *por qué* de cada decisión, el flujo de datos tabla por tabla y el rol de cada módulo Python.
+
+### Orden de estudio recomendado
+
+| Paso | Sección | Objetivo |
+|------|---------|----------|
+| 1 | [Visión ejecutiva](#etl--visión-ejecutiva-30-segundos) | Elevator pitch de 30 s |
+| 2 | [Fundamentos teóricos](#etl--fundamentos-teóricos) | Vocabulario BI/ETL correcto |
+| 3 | [Arquitectura de dos fases](#etl--arquitectura-de-dos-fases) | Por qué staging y por qué MongoDB |
+| 4 | [Diagrama de secuencia](#etl--diagrama-de-secuencia) | Orden exacto de operaciones |
+| 5 | [Línea de datos](#etl--línea-de-datos-lineage) | De dónde sale cada campo del DW |
+| 6 | [Catálogo TR / RQ](#etl--catálogo-de-transformaciones-tr-xxx) | Reglas de negocio implementadas |
+| 7 | [`pipeline.py`](#etl--pipelinepy) + módulos | Código módulo por módulo |
+| 8 | [Cómo explicarlo](#etl--cómo-explicarlo-en-la-sustentación) | Guión oral para el jurado |
+
+### Glosario
+
+| Término | Significado en este proyecto |
+|---------|------------------------------|
+| **OLTP** | Base operacional Northwind en Supabase (`northwind-oltp`). Simula el ERP transaccional. El ETL **solo lee** — nunca escribe. |
+| **Staging** | Zona de aterrizaje en Supabase (`northwind-staging`). Tablas `stg_*` con datos **limpios y enriquecidos** (columnas `STG_*`). |
+| **DW** | Data Warehouse analítico en MongoDB Atlas (`northwind_dw`). Modelo **estrella**: 7 dimensiones + 1 hecho. |
+| **Full refresh** | Estrategia actual: en cada ejecución se vacía staging/DW y se recarga todo. Simple y auditable. |
+| **Fase A** | OLTP → staging: Extract, Transform, Validate, Load. |
+| **Fase B** | Staging → MongoDB: lectura SQL, transformación dimensional, carga documental. |
+| **batch_id** | Identificador `YYYYMMDDHHMMSS` que une todas las filas de una misma ejecución. |
+| **run_id** | Clave autoincremental en `etl_runs` para auditoría de cada ejecución. |
+
+---
+
+## ETL — Visión ejecutiva (30 segundos)
+
+> *"Tenemos un pipeline ETL en Python que extrae datos operacionales de Northwind en Supabase, los limpia y enriquece en una zona staging separada, y luego construye un modelo dimensional en MongoDB Atlas con esquema estrella. Power BI consume ese DW en modo Import. Cada ejecución queda auditada en la tabla `etl_runs`, y el proceso corre en el PC del desarrollador con Task Scheduler para simular actualizaciones periódicas."*
+
+**Números clave del dataset (verificado en producción):**
+
+| Métrica | Valor |
+|---------|-------|
+| Tablas fuente extraídas | 11 |
+| Registros en staging (total) | 3.308 |
+| Documentos en DW (total) | 3.184 |
+| Granularidad de `fact_ventas` | 1 fila = 1 línea de pedido |
+| Líneas de hecho | 2.155 |
+| Duración típica del pipeline | ~60–90 s |
+
+---
+
+## ETL — Fundamentos teóricos
+
+### ¿Qué es ETL y qué hace este proyecto?
+
+**ETL** = **E**xtract (extraer) + **T**ransform (transformar) + **L**oad (cargar).
+
+En BI clásico (Kimball), el objetivo es pasar de un modelo **normalizado transaccional** (muchas tablas, optimizado para INSERT/UPDATE) a un modelo **dimensional desnormalizado** (pocas tablas, optimizado para agregaciones y filtros en dashboards).
+
+Este proyecto implementa un patrón **ETL de dos saltos**:
+
+```
+OLTP (3FN, transaccional)  →  Staging (limpio, enriquecido)  →  DW (estrella, analítico)
+```
+
+No es ELT puro (donde la transformación ocurre dentro del motor del DW), porque:
+- La **limpieza de negocio** ocurre en Python (pandas) antes de persistir en staging.
+- La **conformación dimensional** (segmentos de cliente, calendario, metas) ocurre en Python antes de MongoDB.
+
+### Tres capas de datos — roles distintos
+
+| Capa | Motor | Rol | ¿Se modifica en el ETL? |
+|------|-------|-----|-------------------------|
+| **Fuente OLTP** | Supabase PostgreSQL | Sistema operacional simulado | Solo lectura (`SELECT`) |
+| **Staging** | Supabase PostgreSQL (proyecto separado) | Landing zone + datos conformados | `TRUNCATE` + `INSERT` cada run |
+| **DW** | MongoDB Atlas | Modelo estrella para BI | `drop()` colecciones + `insert_many` cada run |
+
+**¿Por qué dos proyectos Supabase y no un solo schema?**
+
+1. **Aislamiento**: el staging no compite con el OLTP en locks ni espacio.
+2. **Narrativa profesional**: demuestra extracción remota entre sistemas distintos.
+3. **Seguridad**: credenciales y permisos separables (OLTP read-only vs staging read-write).
+
+**¿Por qué MongoDB como DW y no PostgreSQL otra vez?**
+
+1. Cumple el requisito académico de **motor NoSQL** en la capa analítica.
+2. El modelo documental encaja bien con dimensiones desnormalizadas (`dim_cliente` con `segmento_cliente` ya calculado).
+3. Power BI puede consumirlo vía conector MongoDB en modo Import.
+
+### Estrategia de carga: full refresh
+
+| Alternativa | Ventaja | Por qué no la usamos aún |
+|-------------|---------|--------------------------|
+| **Full refresh** ✅ | Simple, reproducible, sin duplicados | Northwind es pequeño (~3K filas staging) |
+| Incremental (watermark) | Eficiente en volúmenes grandes | Planeado como mejora futura (`watermark.py`) |
+| CDC (Change Data Capture) | Tiempo real | Excesivo para dataset estático académico |
+
+En cada ejecución:
+- Staging: `TRUNCATE TABLE stg_xxx` → inserta todo de nuevo.
+- MongoDB: `db.coleccion.drop()` → inserta todo de nuevo.
+- OLTP: **nunca** se toca.
+
+---
+
+## ETL — Arquitectura de dos fases
+
+### Fase A — Ingesta y conformación (`OLTP → Staging`)
+
+**Propósito:** Tomar el modelo relacional fuente y dejarlo **listo para analítica**, con:
+- Texto normalizado (TR-001).
+- Tipos correctos (fechas, decimales).
+- Métricas derivadas de negocio (`STG_ValorNeto`, `STG_DiasEntrega`, etc.).
+- Metadatos de linaje (`STG_LOAD_DATE`, `STG_BATCH_ID`).
+
+**Módulos involucrados:** `extract.py` → `transform.py` → `validate.py` → `load_staging.py`
+
+**Salida:** 11 tablas `stg_*` en Supabase staging + registro parcial en `etl_runs`.
+
+### Fase B — Modelado dimensional (`Staging → DW`)
+
+**Propósito:** Leer el staging ya limpio y **materializar el esquema estrella** en MongoDB:
+- 7 dimensiones (`dim_fecha`, `dim_cliente`, `dim_empleado`, `dim_producto`, `dim_shipper`, `dim_territorio`, `dim_metas_empleado`).
+- 1 tabla de hechos (`fact_ventas`) a nivel línea de pedido.
+
+**Módulo principal:** `load_dw.py` (contiene extract + transform + load de la Fase B en un solo archivo).
+
+**Salida:** 8 colecciones en `northwind_dw` + índices + cierre de `etl_runs` con `status=success`.
+
+### Separación de responsabilidades (principio de diseño)
+
+```
+pipeline.py     → Orquesta, no transforma datos
+extract.py      → Solo lectura SQL → DataFrame
+transform.py    → Solo lógica de limpieza/enriquecimiento en memoria
+validate.py     → Solo reglas de calidad (warnings, no bloquea)
+load_staging.py → Solo escritura PostgreSQL staging
+load_dw.py      → Lectura staging + modelado + escritura MongoDB
+etl_meta.py     → Solo auditoría en etl_runs
+```
+
+Esto facilita **depurar por etapa**: si falla la Fase B, el staging ya tiene datos válidos para inspeccionar.
+
+---
+
+## ETL — Diagrama de secuencia
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario / Task Scheduler
+    participant P as pipeline.py
+    participant O as Supabase OLTP
+    participant S as Supabase Staging
+    participant M as MongoDB Atlas
+
+    U->>P: python pipeline.py
+    P->>O: SELECT 1 (test conexión)
+    P->>S: SELECT 1 (test conexión)
+    P->>S: ensure_staging_schema() si falta DDL
+    P->>S: INSERT etl_runs (status=running)
+
+    loop Fase A — 11 tablas
+        P->>O: SELECT * FROM "Tabla"
+        Note over P: transform + validate en memoria
+        P->>S: TRUNCATE stg_xxx
+        P->>S: INSERT stg_xxx (lotes de 500)
+    end
+
+    loop Fase B — 8 colecciones
+        P->>S: SELECT * FROM stg_*
+        Note over P: build_dim_* + build_fact_ventas
+        P->>M: drop() colecciones
+        P->>M: insert_many (lotes de 500)
+        P->>M: create_index()
+    end
+
+    P->>S: UPDATE etl_runs (status=success)
+    P-->>U: RESUMEN FINAL en log
+```
+
+### Estados del pipeline
+
+| Estado | Cuándo | Qué revisar |
+|--------|--------|-------------|
+| `running` | Pipeline en ejecución | Log en consola / `logs/etl_run_*.log` |
+| `success` | Terminó sin excepciones | Conteos en staging + MongoDB |
+| `failed` | Excepción no recuperada | `error_message` en `etl_runs` + log CRITICAL |
+
+---
+
+## ETL — Línea de datos (lineage)
+
+Mapa completo: **de dónde sale cada dato** hasta `fact_ventas`.
+
+### Tablas fuente → staging
+
+| Tabla OLTP | Registros | Tabla staging | Transformador | Columnas derivadas clave |
+|------------|-----------|---------------|---------------|--------------------------|
+| `Categories` | 8 | `stg_categories` | `transform_categories` | — |
+| `Suppliers` | 29 | `stg_suppliers` | `transform_suppliers` | — |
+| `Shippers` | 3 | `stg_shippers` | `transform_shippers` | — |
+| `Customers` | 91 | `stg_customers` | `transform_customers` | — |
+| `Employees` | 9 | `stg_employees` | `transform_employees` | `FullName` |
+| `Region` | 4 | `stg_region` | *(sin transformador)* | — |
+| `Territories` | 53 | `stg_territories` | *(sin transformador)* | — |
+| `EmployeeTerritories` | 49 | `stg_employee_territories` | *(sin transformador)* | — |
+| `Products` | 77 | `stg_products` | `transform_products` | `STG_AlertaBajoReorden`, `STG_StockProyectado` |
+| `Orders` | 830 | `stg_orders` | `transform_orders` | `STG_DiasEntrega`, `STG_EntregaPuntual` |
+| `Order Details` | 2.155 | `stg_order_details` | `transform_order_details` | `STG_ValorNeto` |
+
+**Orden de extracción/carga:** definido en `SOURCE_TABLES` de `config.py`. Las dimensiones van antes que los hechos para respetar dependencias lógicas (aunque el staging no tiene FK entre `stg_*`).
+
+### Staging → colecciones DW
+
+| Colección MongoDB | Docs | Función constructora | Fuentes staging | Lógica de negocio |
+|-------------------|------|------------------------|-----------------|-------------------|
+| `dim_fecha` | 672 | `build_dim_fecha` | `stg_orders` (fechas) | Calendario continuo min→max |
+| `dim_cliente` | 91 | `build_dim_cliente` | `stg_customers` + `stg_orders` + `stg_order_details` | Agrega ventas, segmenta cliente |
+| `dim_empleado` | 9 | `build_dim_empleado` | `stg_employees` | Copia + `reports_to` |
+| `dim_producto` | 77 | `build_dim_producto` | `stg_products` + `stg_categories` + `stg_suppliers` | Join descriptivo + costo 60% |
+| `dim_shipper` | 3 | `build_dim_shipper` | `stg_shippers` + `stg_orders` | Promedio días entrega |
+| `dim_territorio` | 69 | `build_dim_territorio` | `stg_customers` | País×ciudad → continente/zona |
+| `dim_metas_empleado` | 108 | `build_dim_metas_empleado` | `stg_employees` | 9 empleados × 3 años × 4 trimestres |
+| `fact_ventas` | 2.155 | `build_fact_ventas` | `stg_order_details` + `stg_orders` + dims | 1 fila por línea de pedido |
+
+### Lineage de campos críticos en `fact_ventas`
+
+| Campo DW | Origen | Cálculo |
+|----------|--------|---------|
+| `order_detail_id` | `OrderID` + `ProductID` | `"{OrderID}-{ProductID}"` |
+| `fecha_id` | `OrderDate` | `YYYYMMDD` como string |
+| `total_venta` | `STG_ValorNeto` (staging) | `UnitPrice × Quantity × (1 - Discount)` |
+| `costo_total` | `dim_producto.costo_adquisicion` | `costo_adquisicion × cantidad` |
+| `margen` | derivado | `total_venta - costo_total` |
+| `margen_pct` | derivado | `(margen / total_venta) × 100` |
+| `territorio_id` | `dim_cliente.country` | Lookup en mapa país → territorio |
+| `dias_entrega` | `STG_DiasEntrega` (staging) | Días entre `OrderDate` y `ShippedDate` |
+| `entrega_puntual` | `STG_EntregaPuntual` (staging) | 1 si envió a tiempo, 0 si tarde, NULL si no envió |
+
+---
+
+## ETL — Flujo en lenguaje simple
+
+Cada vez que ejecutas `python pipeline.py` (o Task Scheduler lo hace por ti):
+
+```
+Supabase OLTP          Tu PC (Python)              Supabase Staging         MongoDB Atlas
+─────────────          ──────────────              ────────────────         ─────────────
+"Customers" etc.  →    EXTRACT (leer)         →   (en memoria)
+                       TRANSFORM (limpiar)    →   (en memoria)
+                       VALIDATE (revisar)     →   (en memoria)
+                       LOAD                   →   stg_customers, stg_orders...
+                                                →   EXTRACT (leer stg_*)
+                                                →   TRANSFORM (armar dims/facts)
+                                                →   DROP colecciones + INSERT  →  dim_*, fact_*
+```
+
+**Importante:** staging no es una “copia cruda” antes del ETL. Staging **es el resultado** de la Fase A. La Fase B lee ese staging y construye el modelo dimensional en MongoDB.
+
+**Qué se limpia en cada run**
+
+| Capa | Acción |
+|------|--------|
+| Staging | `TRUNCATE` de cada tabla `stg_*` antes de insertar |
+| MongoDB DW | `drop()` de las 8 colecciones antes de insertar |
+| OLTP | Nunca se modifica — solo lectura |
+
+---
+
+## ETL — Catálogo de transformaciones (TR-xxx)
+
+Todas las reglas están implementadas en [`etl/etl/transform.py`](etl/etl/transform.py). Son el corazón de la **Fase A**.
+
+| ID | Nombre | Tabla(s) | Descripción | Implementación |
+|----|--------|----------|-------------|----------------|
+| **TR-001** | Normalización texto | Varias | `UPPER(TRIM(campo))` para consistencia en filtros BI | `_clean_str()` |
+| **TR-002** | Cast monetario | Products, Orders, Order Details | Precios y fletes a `NUMERIC(18,2)` | `_to_decimal()` |
+| **TR-003** | Fechas sin hora | Employees, Orders | `DATETIME` → solo `DATE` | `_to_date()` |
+| **TR-004** | BIT → int | Products | `Discontinued` como 0/1 | `.astype(int)` |
+| **TR-005** | Descuento decimal | Order Details | `Discount` a 2 decimales | `_to_decimal(, 2)` |
+| **TR-006** | Valor neto venta | Order Details | Métrica base de ingresos | Ver fórmula abajo |
+| **TR-007** | Días de entrega | Orders | Logística P7 | Ver fórmula abajo |
+| **TR-008** | Entrega puntual | Orders | Indicador binario P7 | Ver fórmula abajo |
+| **TR-009** | Alerta reorden | Products | Flag operativo | `ALERTA` si stock < reorder y activo |
+| **TR-010** | Stock proyectado | Products | `UnitsInStock + UnitsOnOrder` | Columna `STG_StockProyectado` |
+| **TR-013** | Nombre completo | Employees | Etiqueta para reportes | `LASTNAME, FIRSTNAME` en mayúsculas |
+| **TR-014** | Filtro discontinued | Products | Flag informativo, no elimina filas | Solo marca, no filtra |
+
+### Fórmulas detalladas
+
+**TR-006 — Valor neto de venta** (base de casi todas las medidas de ingreso):
+
+```
+STG_ValorNeto = UnitPrice × Quantity × (1 - Discount)
+```
+
+Ejemplo: precio 10, cantidad 5, descuento 0.10 → `10 × 5 × 0.90 = 45.00`
+
+**TR-007 — Días de entrega:**
+
+```
+STG_DiasEntrega = ShippedDate - OrderDate   (en días)
+                 = NULL si ShippedDate es NULL
+```
+
+**TR-008 — Entrega puntual:**
+
+```
+STG_EntregaPuntual = 1  si ShippedDate ≤ RequiredDate
+                   = 0  si ShippedDate > RequiredDate
+                   = NULL si ShippedDate es NULL
+```
+
+### Tablas sin transformador dedicado
+
+`Region`, `Territories` y `EmployeeTerritories` pasan **sin cambios** al staging. Se extraen para completitud del modelo fuente y posibles extensiones futuras, pero la Fase B actual no las usa directamente en las dimensiones del DW.
+
+---
+
+## ETL — Catálogo de calidad (RQ-xxx)
+
+Implementado en [`etl/etl/validate.py`](etl/etl/validate.py). Las validaciones **no detienen el pipeline** por defecto: emiten `WARNING` en el log. Esto permite cargar datos con anomalías menores mientras se documentan.
+
+| ID | Tabla | Campo | Regla | Severidad |
+|----|-------|-------|-------|-----------|
+| **RQ-001** | Order Details | Discount | Debe estar en [0, 1] | ALTA |
+| **RQ-002** | Order Details | Quantity | Debe ser > 0 | ALTA |
+| **RQ-003** | Order Details | UnitPrice | Debe ser ≥ 0 | ALTA |
+| **RQ-004** | Orders | ShippedDate | ShippedDate ≥ OrderDate | ALTA |
+| **RQ-005** | Orders | RequiredDate | RequiredDate ≥ OrderDate | MEDIA |
+| **RQ-006** | Orders | OrderDate | No puede ser NULL | ALTA |
+| **RQ-007** | Products | UnitsInStock | No negativo | ALTA |
+| **RQ-009** | Products | UnitPrice | No negativo | ALTA |
+| **RQ-010** | Products | Discontinued | Dominio {0, 1} | ALTA |
+| **RQ-015** | Customers | CustomerID | Longitud = 5 y único | ALTA |
+
+**Nota:** `transform_order_details` ya corrige descuentos fuera de rango forzándolos a 0 **antes** de la validación, por lo que RQ-001 rara vez reporta issues en la práctica.
+
+**Activar/desactivar:** variable `VALIDATE_DATA=true` en `.env`, o flag `--skip-validate` en CLI.
+
+---
+
+## ETL — Esquema staging (`stg_*`)
+
+DDL completo: [`etl/sql/northwind_staging_supabase.sql`](etl/sql/northwind_staging_supabase.sql)
+
+### Convenciones del esquema
+
+1. **Nombres PascalCase entre comillas** (`"CustomerID"`) — compatibles con el dataset Northwind original y con pandas `to_sql`.
+2. **Tres columnas de metadatos** en todas las tablas `stg_*`:
+   - `STG_LOAD_DATE` — fecha de carga (sin hora).
+   - `STG_SOURCE_NAME` — siempre `"Northwind"`.
+   - `STG_BATCH_ID` — timestamp de la ejecución (`YYYYMMDDHHMMSS`).
+3. **Columnas derivadas** con prefijo `STG_` para distinguirlas de campos fuente.
+
+### Tablas y claves primarias
+
+| Tabla staging | PK | Columnas derivadas exclusivas |
+|---------------|-----|-------------------------------|
+| `stg_categories` | CategoryID | — |
+| `stg_suppliers` | SupplierID | — |
+| `stg_shippers` | ShipperID | — |
+| `stg_customers` | CustomerID (CHAR 5) | — |
+| `stg_employees` | EmployeeID | FullName |
+| `stg_region` | RegionID | — |
+| `stg_territories` | TerritoryID | — |
+| `stg_employee_territories` | (EmployeeID, TerritoryID) | — |
+| `stg_products` | ProductID | STG_AlertaBajoReorden, STG_StockProyectado |
+| `stg_orders` | OrderID | STG_DiasEntrega, STG_EntregaPuntual |
+| `stg_order_details` | (OrderID, ProductID) | STG_ValorNeto |
+
+### Tabla de auditoría `etl_runs`
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `run_id` | BIGSERIAL PK | Identificador único de ejecución |
+| `started_at` | TIMESTAMPTZ | Inicio automático (`now()`) |
+| `finished_at` | TIMESTAMPTZ | Fin (NULL si aún corre) |
+| `status` | VARCHAR | `running` / `success` / `failed` |
+| `batch_id` | VARCHAR | Mismo valor que `STG_BATCH_ID` |
+| `phase` | VARCHAR | `full` (Fase A + B) |
+| `rows_loaded` | JSONB | Conteo por tabla/colección |
+| `tables_ok` | TEXT[] | Lista de tablas/colecciones exitosas |
+| `tables_failed` | TEXT[] | Lista de fallos |
+| `error_message` | TEXT | Mensaje si `status=failed` |
+| `duration_sec` | NUMERIC | Duración total en segundos |
+
+### Índices de performance
+
+El DDL crea índices en FKs frecuentes (`CustomerID`, `EmployeeID`, `OrderDate`, `ProductID`, etc.) para acelerar los `SELECT *` de la Fase B.
+
+---
+
+## ETL — Modelo DW (colecciones MongoDB)
+
+Implementado en [`etl/etl/load_dw.py`](etl/etl/load_dw.py). Base de datos: `northwind_dw` (configurable vía `MONGO_DB`).
+
+### Esquema estrella
+
+```
+                    dim_fecha (fecha_id)
+                        │
+                    dim_cliente (cliente_id)
+                        │
+dim_metas_empleado ─► dim_empleado (empleado_id)
+                        │
+                    dim_producto (producto_id)
+                        │
+                    dim_shipper (shipper_id)
+                        │
+                    dim_territorio (territorio_id)
+                        │
+                 ┌──────▼ fact_ventas ──────┐
+                 │  PK: order_detail_id     │
+                 │  FKs → todas las dims    │
+                 │  Métricas: venta, margen │
+                 └──────────────────────────┘
+```
+
+### `dim_fecha` — dimensión calendario
+
+| Campo | Tipo lógico | Descripción |
+|-------|-------------|-------------|
+| `fecha_id` | string | PK surrogate `YYYYMMDD` |
+| `fecha_completa` | datetime | Fecha como objeto |
+| `anio`, `trimestre`, `mes` | int | Para agregaciones temporales (P1, P10) |
+| `nombre_mes`, `nombre_dia` | string | Etiquetas en español |
+| `semana_anio`, `dia` | int | Granularidad semanal/diaria |
+| `es_fin_semana` | bool | Filtro para análisis de patrones |
+
+Rango generado: desde la fecha mínima hasta la máxima encontrada en `stg_orders` (típicamente 1996-07-04 → 1998-05-06, **672 días**).
+
+### `dim_cliente` — con segmentación (P2, P6, P9)
+
+| Campo | Origen / cálculo |
+|-------|------------------|
+| `cliente_id` | `stg_customers.CustomerID` |
+| `total_ventas_usd` | SUM(`STG_ValorNeto`) de todos sus pedidos |
+| `n_ordenes` | COUNT DISTINCT `OrderID` |
+| `segmento_cliente` | Regla de negocio (ver tabla abajo) |
+
+**Reglas de segmentación:**
+
+| Segmento | Condición |
+|----------|-----------|
+| `Inactivo` | Más de 400 días sin comprar (respecto a la última fecha de pedido del dataset) |
+| `Nuevo` | 1 orden o menos |
+| `Premium` | `total_ventas_usd` > 10.000 |
+| `Regular` | Todo lo demás |
+
+### `dim_producto` — con costo estimado (P3, P4, P8)
+
+| Campo | Cálculo |
+|-------|---------|
+| `costo_adquisicion` | `UnitPrice × 0.60` (supuesto documentado del 40% de margen bruto) |
+| `categoria`, `proveedor` | Lookup desde `stg_categories` y `stg_suppliers` |
+
+### `dim_territorio` — geografía conformada (P6)
+
+Genera un `territorio_id` único por combinación país-ciudad del cliente. Asigna **continente** y **zona** según `ZONA_MAP` (diccionario hardcodeado con ~25 países de Northwind).
+
+Ejemplo: `USA` → continente `América`, zona `Norteamérica`.
+
+### `dim_metas_empleado` — tabla auxiliar para P5
+
+9 empleados × 3 años (1996–1998) × 4 trimestres = **108 documentos**.
+
+| Cargo | Meta trimestral USD | Categoría |
+|-------|---------------------|-----------|
+| Vice President, Sales | 18.000 | Agresiva |
+| Sales Manager | 15.000 | Estándar |
+| Sales Representative (default) | 12.000 | Básica |
+
+### `fact_ventas` — tabla de hechos central
+
+**Granularidad:** 1 documento = 1 línea de `stg_order_details` (clave compuesta OrderID + ProductID).
+
+| Grupo | Campos |
+|-------|--------|
+| **Claves** | `order_detail_id`, `order_id`, `fecha_id`, `fecha_entrega_id` |
+| **FKs dimensionales** | `cliente_id`, `empleado_id`, `producto_id`, `shipper_id`, `territorio_id` |
+| **Cantidades y precios** | `cantidad`, `unit_price`, `descuento`, `freight` |
+| **Métricas calculadas** | `subtotal`, `total_venta`, `costo_total`, `margen`, `margen_pct` |
+| **Fechas** | `order_date`, `required_date`, `shipped_date` |
+| **Logística** | `dias_entrega`, `entrega_puntual` |
+
+### Índices MongoDB (creados por `setup_indexes`)
+
+| Colección | Índice | Tipo |
+|-----------|--------|------|
+| `dim_fecha` | `fecha_id` | UNIQUE |
+| `dim_cliente` | `cliente_id` | UNIQUE |
+| `dim_empleado` | `empleado_id` | UNIQUE |
+| `dim_producto` | `producto_id` | UNIQUE |
+| `dim_shipper` | `shipper_id` | UNIQUE |
+| `dim_territorio` | `territorio_id` | UNIQUE |
+| `dim_metas_empleado` | (empleado_id, anio, trimestre) | UNIQUE compuesto |
+| `fact_ventas` | `order_detail_id` | UNIQUE |
+| `fact_ventas` | `fecha_id`, `cliente_id`, `total_venta`, `margen` | Consulta |
+
+### Utilidad `_safe_int()` — manejo de NULL/NaN
+
+Pandas representa valores SQL `NULL` como `float('nan')`. En Python, `nan is not None` es `True`, lo que causaba errores al hacer `int(nan)`. La función `_safe_int()` usa `pd.isna()` para convertir correctamente a `None` antes de insertar en MongoDB.
+
+---
+
+## ETL — Estructura de archivos
+
+```
+etl/
+├── pipeline.py                 ← entrada única
+├── requirements.txt
+├── logs/                       ← generado al ejecutar
+├── sql/
+│   ├── northwind_oltp_supabase.sql      ← manual, una vez (fuente)
+│   └── northwind_staging_supabase.sql   ← bootstrap automático
+└── etl/
+    ├── config.py
+    ├── db_connection.py
+    ├── bootstrap.py
+    ├── extract.py
+    ├── transform.py
+    ├── validate.py
+    ├── load_staging.py
+    ├── load_dw.py
+    ├── etl_meta.py
+    └── logger_setup.py
+```
+
+El `.env` vive en la **raíz del repo** (`advanced-db-final-project/.env`), no dentro de `etl/`.
+
+La Fase B (staging → MongoDB) está integrada en [`etl/etl/load_dw.py`](etl/etl/load_dw.py).
+
+---
+
+## ETL — `pipeline.py`
+
+**Archivo:** [`etl/pipeline.py`](etl/pipeline.py)  
+**Rol:** Orquestador central. **No contiene lógica de negocio** — solo coordina módulos, maneja errores y escribe el resumen final.
+
+### Contrato de entrada/salida
+
+| Entrada | Salida |
+|---------|--------|
+| Variables `.env` vía `config.py` | Logs en consola + `logs/etl_run_*.log` |
+| Flags CLI opcionales | Datos en `stg_*` (Fase A) |
+| | Colecciones MongoDB (Fase B) |
+| | Registro en `etl_runs` |
+| | Exit code 0 (éxito) o 1 (fallo) |
+
+### Pasos de `main()` — detalle
+
+| Paso log | Módulo | Acción | ¿Se omite con flags? |
+|----------|--------|--------|---------------------|
+| `[1/6] CONEXIONES` | `db_connection` | `get_source_engine` + `test_connection` | Nunca |
+| `[2/6] BOOTSTRAP` | `bootstrap`, `etl_meta` | DDL si falta + `start_run()` | `--dry-run`, `--only-extract` |
+| `[3/6] EXTRACCIÓN` | `extract` | `extract_all()` → dict de DataFrames | Nunca |
+| `[4/6] TRANSFORMACIÓN` | `transform` | `transform_all()` | Nunca (salvo `--only-extract` que termina antes) |
+| `[4b] VALIDACIÓN` | `validate` | `validate_all()` | `--skip-validate` o `VALIDATE_DATA=false` |
+| `[5/6] CARGA STAGING` | `load_staging` | `load_staging_all()` con TRUNCATE | `--dry-run`, `--only-extract` |
+| `[6/6] CARGA DW` | `load_dw` | `load_dw()` completo | `--dry-run`, `--skip-dw` |
+
+### Manejo de errores
+
+```python
+try:
+    # ... flujo completo ...
+    etl_meta.finish_run(...)   # status = success
+except Exception as e:
+    etl_meta.fail_run(...)     # status = failed, guarda error_message
+    sys.exit(1)
+```
+
+Si la Fase A falla, la Fase B **no se ejecuta**. Si la Fase B falla, el staging **ya tiene datos** de esa ejecución (útil para depurar).
+
+### Flags CLI — casos de uso
+
+| Flag | Cuándo usarlo | Ejemplo |
+|------|---------------|---------|
+| `--dry-run` | Probar conexión y transformaciones sin escribir nada | Primera vez que configuras `.env` |
+| `--only-extract` | Verificar que el OLTP responde y tiene datos | Diagnóstico de red/credenciales |
+| `--skip-validate` | Acelerar runs cuando ya confías en los datos | Desarrollo iterativo |
+| `--skip-dw` | Cargar solo staging (sin MongoDB) | Cuando Atlas no está disponible |
+
+### Variables en memoria durante la ejecución
+
+| Variable | Contenido |
+|----------|-----------|
+| `raw_data` | `{tabla: DataFrame}` post-extract |
+| `clean_data` | `{tabla: DataFrame}` post-transform |
+| `load_summary` | `{tabla: n_registros}` post-staging |
+| `dw_counts` | `{coleccion: n_docs}` post-MongoDB |
+| `run_id`, `batch_id` | Identificadores de auditoría |
+
+---
+
+## ETL — `config.py`
+
+**Archivo:** [`etl/etl/config.py`](etl/etl/config.py)  
+**Rol:** Punto único de configuración. Separa **secretos** (`.env`) de **constantes de código** (tablas, rutas).
+
+### Resolución de rutas
+
+```python
+_REPO_ROOT = Path(__file__).resolve().parents[2]   # raíz del repo
+load_dotenv(_REPO_ROOT / ".env")                   # carga .env automáticamente
+ETL_ROOT = Path(__file__).resolve().parents[1]     # carpeta etl/
+```
+
+Por eso el `.env` debe estar en `advanced-db-final-project/.env`, **no** dentro de `etl/`.
+
+### Variables de entorno
+
+| Variable | Default | Uso |
+|----------|---------|-----|
+| `SOURCE_DATABASE_URL` | *(vacío)* | URI PostgreSQL Supabase OLTP. **Session pooler :5432** recomendado. |
+| `STAGING_DATABASE_URL` | *(vacío)* | URI PostgreSQL Supabase staging. |
+| `MONGO_URI` | *(vacío)* | URI `mongodb+srv://...` de Atlas. |
+| `MONGO_DB` | `northwind_dw` | Nombre de la base DW en Atlas. |
+| `BATCH_SIZE` | `500` | Tamaño de lote para `to_sql` y `insert_many`. |
+| `TRUNCATE_FIRST` | `true` | Si vaciar staging antes de cada carga. |
+| `VALIDATE_DATA` | `true` | Si ejecutar `validate.py`. |
+| `LOG_LEVEL` | `INFO` | Verbosidad del log (`DEBUG` muestra cada transformación). |
+
+Valores booleanos aceptan: `1`, `true`, `yes`, `on` (case insensitive).
+
+### Constantes de código (no van en `.env`)
+
+| Constante | Valor | Por qué está en código |
+|-----------|-------|------------------------|
+| `SOURCE_TABLES` | 11 tablas en orden | Orden de dependencias lógicas; rara vez cambia |
+| `TABLE_MAP` | `Categories` → `stg_categories`, etc. | Contrato entre extract y load_staging |
+| `STAGING_DDL_FILE` | `etl/sql/northwind_staging_supabase.sql` | Ruta al bootstrap |
+| `LOG_DIR` | `logs` | Relativo al directorio de ejecución (`cd etl/`) |
+
+---
+
+## ETL — `db_connection.py`
+
+**Para qué sirve:** Crea conexiones SQLAlchemy a PostgreSQL.
+
+### Funciones
+
+| Función | Qué hace |
+|---------|----------|
+| `get_engine_from_url(url)` | Crea engine desde `postgresql://...` con `pool_pre_ping` (verifica conexión antes de usarla) |
+| `get_source_engine(url)` | Engine para OLTP |
+| `get_staging_engine(url)` | Engine para staging (pool de 5 conexiones) |
+| `test_connection(engine, label)` | Ejecuta `SELECT 1`; retorna `True`/`False` y loguea resultado |
+| `_build_url(cfg)` | Legacy: construye URL desde dict (LocalDB/MySQL) — solo compatibilidad |
+
+---
+
+## ETL — `bootstrap.py`
+
+**Para qué sirve:** En la **primera ejecución**, crea tablas `stg_*` y `etl_runs` si no existen.
+
+### Funciones
+
+| Función | Qué hace |
+|---------|----------|
+| `staging_schema_exists(engine)` | Consulta `information_schema` buscando `stg_orders` |
+| `ensure_staging_schema(engine, ddl_path)` | Si no existe esquema, ejecuta `northwind_staging_supabase.sql` |
+| `_split_sql_statements(sql)` | Divide el archivo SQL en sentencias ejecutables |
+
+**No hace en cada run:** no borra proyectos Supabase; no hace `DROP` de tablas si ya existen. El refresco de **datos** lo hace `load_staging.py` con `TRUNCATE`.
+
+---
+
+## ETL — `extract.py`
+
+**Archivo:** [`etl/etl/extract.py`](etl/etl/extract.py)  
+**Rol:** Capa **E**xtract de la Fase A. Ejecuta `SELECT` contra el OLTP y materializa todo en memoria como DataFrames pandas.
+
+### Principio de diseño: extracción completa (full table scan)
+
+No hay filtros `WHERE` ni joins en extract. Cada tabla se lee **entera** porque:
+1. Northwind es pequeño (~3.300 filas totales).
+2. Full refresh requiere el dataset completo cada vez.
+3. Los joins y agregaciones ocurren en transform (Fase A) o load_dw (Fase B).
+
+### `EXTRACT_QUERIES` — detalle por tabla
+
+Diccionario con un `SELECT` por tabla. Nombres **entre comillas dobles** (`"Customers"`) porque PostgreSQL convierte identificadores sin comillas a minúsculas, y el DDL de Northwind usa PascalCase.
+
+| Tabla fuente | Registros | Columnas extraídas | Notas |
+|--------------|-----------|-------------------|-------|
+| `Categories` | 8 | CategoryID, CategoryName, Description | Dimensión producto |
+| `Suppliers` | 29 | ID, empresa, contacto, dirección | Dimensión producto |
+| `Shippers` | 3 | ShipperID, CompanyName, Phone | Dimensión logística |
+| `Customers` | 91 | ID, empresa, contacto, geografía | Dimensión cliente |
+| `Employees` | 9 | ID, nombres, cargo, fechas, ReportsTo | Sin foto (BYTEA) |
+| `Products` | 77 | ID, nombre, precio, stock, categoría, proveedor | Hecho potencial |
+| `Orders` | 830 | ID, cliente, empleado, fechas, envío, flete | Cabecera de pedido |
+| `Order Details` | 2.155 | OrderID, ProductID, UnitPrice, Quantity, Discount | **Tabla de hechos fuente** |
+| `Region` | 4 | RegionID, RegionDescription (TRIM) | Auxiliar territorial |
+| `Territories` | 53 | TerritoryID, descripción, RegionID | Auxiliar territorial |
+| `EmployeeTerritories` | 49 | EmployeeID, TerritoryID | Puente M:N |
+
+### Funciones
+
+| Función | Entrada → Salida | Comportamiento ante error |
+|---------|------------------|---------------------------|
+| `extract_table(engine, table_name)` | nombre → `DataFrame` | Lanza excepción si no hay query |
+| `extract_all(engine, table_list)` | lista → `(dict, [errores])` | Continúa con otras tablas; acumula errores |
+
+**Tecnología:** `pd.read_sql(text(query), conn)` vía SQLAlchemy. La conexión se abre y cierra por tabla (no transacción larga).
+
+---
+
+## ETL — `transform.py`
+
+**Archivo:** [`etl/etl/transform.py`](etl/etl/transform.py)  
+**Rol:** Capa **T**ransform de la Fase A. Recibe DataFrames crudos y devuelve DataFrames conformados listos para staging.
+
+### Patrón de diseño: transformador por tabla + dispatcher
+
+Cada tabla tiene su función `transform_<tabla>()`. El diccionario `_TRANSFORMERS` mapea nombre de tabla → función. `transform_all()` itera el dict de entrada y aplica el transformador correspondiente.
+
+Tablas sin entrada en `_TRANSFORMERS` pasan con `.copy()` sin cambios (Region, Territories, EmployeeTerritories).
+
+### Utilidades internas
+
+| Función | Regla | Detalle técnico |
+|---------|-------|-----------------|
+| `_clean_str(series)` | TR-001 | `astype(str).str.strip().str.upper()`; reemplaza `"NAN"` por `pd.NA` |
+| `_to_decimal(series, n)` | TR-002/005 | `pd.to_numeric(errors="coerce").round(n)` |
+| `_to_date(series)` | TR-003 | `pd.to_datetime().dt.normalize()` — elimina componente hora |
+
+### Transformadores por tabla — resumen
+
+| Función | Columnas afectadas | Columnas nuevas |
+|---------|-------------------|-----------------|
+| `transform_categories` | CategoryName, Description | — |
+| `transform_suppliers` | CompanyName, Country, City, ContactName | — |
+| `transform_shippers` | CompanyName | — |
+| `transform_customers` | CustomerID, CompanyName, Country, City | — |
+| `transform_employees` | FirstName, LastName, Title, fechas | `FullName` |
+| `transform_products` | ProductName, UnitPrice, Discontinued | `STG_AlertaBajoReorden`, `STG_StockProyectado` |
+| `transform_orders` | Fechas, Freight, ShipCountry/City | `STG_DiasEntrega`, `STG_EntregaPuntual` |
+| `transform_order_details` | UnitPrice, Discount | `STG_ValorNeto` |
+
+### Detalle crítico: tipos nullable en `transform_orders`
+
+`STG_DiasEntrega` usa `pd.Int32Dtype()` y `STG_EntregaPuntual` usa `pd.Int8Dtype()`. Esto evita que pandas inserte `pd.NA` en columnas INTEGER de PostgreSQL, que causaba errores de tipo en versiones anteriores del pipeline (bug F2-01).
+
+Ver fórmulas completas en [Catálogo TR-xxx](#etl--catálogo-de-transformaciones-tr-xxx).
+
+---
+
+## ETL — `validate.py`
+
+**Para qué sirve:** Revisa calidad **antes** de escribir en staging. No detiene el pipeline por defecto; emite warnings en el log.
+
+### Validadores
+
+| Función | Reglas |
+|---------|--------|
+| `validate_order_details` | RQ-001 Discount ∈ [0,1]; RQ-002 Quantity > 0; RQ-003 UnitPrice ≥ 0 |
+| `validate_orders` | RQ-004 ShippedDate ≥ OrderDate; RQ-005 RequiredDate ≥ OrderDate; RQ-006 OrderDate not null |
+| `validate_products` | RQ-007 stock ≥ 0; RQ-009 precio ≥ 0; RQ-010 Discontinued ∈ {0,1} |
+| `validate_customers` | RQ-015 CustomerID longitud 5; unicidad |
+
+| Función | Qué hace |
+|---------|----------|
+| `validate_all(clean_data)` | Ejecuta todos los validadores aplicables; retorna `{tabla: n_issues}` |
+
+---
+
+## ETL — `load_staging.py`
+
+**Archivo:** [`etl/etl/load_staging.py`](etl/etl/load_staging.py)  
+**Rol:** Capa **L**oad de la Fase A. Persiste DataFrames en PostgreSQL staging.
+
+### Estrategia de carga
+
+1. **TRUNCATE** tabla destino (si `TRUNCATE_FIRST=true`).
+2. Añadir columnas de metadatos al DataFrame en memoria.
+3. **INSERT** por lotes con `df.to_sql(if_exists="append", method="multi")`.
+
+`method="multi"` genera un solo `INSERT` con múltiples valores por lote, más eficiente que fila a fila.
+
+### Funciones
+
+| Función | Qué hace |
+|---------|----------|
+| `truncate_staging(engine, table_name)` | `TRUNCATE TABLE stg_xxx` dentro de transacción |
+| `load_table(engine, source_name, df, ...)` | Trunca + metadatos + insert por lotes; retorna conteo |
+| `load_all(engine, clean_data, table_order, ...)` | Itera `SOURCE_TABLES` en orden; retorna `(summary, errors)` |
+
+### Metadatos de linaje (añadidos a cada fila)
+
+| Columna | Valor | Propósito |
+|---------|-------|-----------|
+| `STG_LOAD_DATE` | `pd.Timestamp.now().normalize()` | Cuándo se cargó |
+| `STG_SOURCE_NAME` | `"Northwind"` | De qué sistema viene |
+| `STG_BATCH_ID` | `YYYYMMDDHHMMSS` | Agrupa filas de la misma ejecución |
+
+El `STG_BATCH_ID` coincide con `batch_id` en `etl_runs` (mismo formato, generado en momentos cercanos).
+
+### Mapeo fuente → staging (`TABLE_MAP` en config.py)
+
+| Tabla fuente | Tabla staging | Registros típicos |
+|--------------|---------------|-------------------|
+| Categories | stg_categories | 8 |
+| Suppliers | stg_suppliers | 29 |
+| Shippers | stg_shippers | 3 |
+| Customers | stg_customers | 91 |
+| Employees | stg_employees | 9 |
+| Region | stg_region | 4 |
+| Territories | stg_territories | 53 |
+| EmployeeTerritories | stg_employee_territories | 49 |
+| Products | stg_products | 77 |
+| Orders | stg_orders | 830 |
+| Order Details | stg_order_details | 2.155 |
+
+---
+
+## ETL — `load_dw.py`
+
+**Archivo:** [`etl/etl/load_dw.py`](etl/etl/load_dw.py)  
+**Rol:** **Todo el pipeline de la Fase B** en un solo módulo (~530 líneas). Es el más complejo del proyecto.
+
+### Flujo interno de `load_dw()`
+
+```
+1. read_staging_table() × 8 tablas
+2. build_dim_fecha()
+3. build_dim_cliente()      ← usa orders + order_details para agregar
+4. build_dim_empleado()
+5. build_dim_producto()     ← join categories + suppliers en memoria
+6. build_dim_shipper()      ← promedia STG_DiasEntrega
+7. build_dim_territorio()   ← deduplica país×ciudad
+8. build_dim_metas_empleado()
+9. build_fact_ventas()      ← usa dims ya construidas para lookups
+10. MongoClient → drop() × 8 → insert_col() × 8 → setup_indexes()
+```
+
+### Funciones auxiliares
+
+| Función | Propósito |
+|---------|-----------|
+| `read_staging_table()` | `pd.read_sql("SELECT * FROM ...")` → `list[dict]` |
+| `to_dt()` | Normaliza fechas de pandas/SQL/ISO string a `datetime` |
+| `fid()` | `datetime` → `"YYYYMMDD"` (surrogate key de fecha) |
+| `_safe_int()` | Convierte enteros manejando `None` y `NaN` de pandas |
+
+### Constructores de dimensiones — algoritmos
+
+**`build_dim_cliente`** — el más elaborado:
+1. Construye mapa `OrderID → CustomerID` desde `stg_orders`.
+2. Itera `stg_order_details` sumando `STG_ValorNeto` por cliente.
+3. Calcula `dias_inactivo` respecto a la última fecha de pedido del dataset.
+4. Aplica reglas de segmentación (ver [dim_cliente](#etl--modelo-dw-colecciones-mongodb)).
+
+**`build_dim_territorio`** — generación de surrogate key:
+1. Itera clientes; clave natural = `country + city`.
+2. Genera `territorio_id` = primeros 3 chars del país + primeros 2 de ciudad (`USA-SE` para Seattle, USA).
+3. Resuelve colisiones añadiendo sufijo numérico (`USA-SE-1`).
+
+**`build_fact_ventas`** — join en memoria:
+1. `order_map = {OrderID: order_dict}` para lookup O(1).
+2. Por cada línea de detalle: obtiene cabecera de pedido, calcula métricas, resuelve `territorio_id` vía país del cliente.
+3. Prefiere `STG_ValorNeto` del staging sobre recalcular (single source of truth post-Fase A).
+
+### Carga MongoDB
+
+| Función | Detalle |
+|---------|---------|
+| `insert_col()` | `insert_many(ordered=False)` en lotes; tolera duplicados parciales con warning |
+| `setup_indexes()` | 15+ índices: PKs únicos + índices de consulta para Power BI |
+| `load_dw()` | Función pública llamada desde `pipeline.py`; retorna `{coleccion: count}` |
+
+### Colecciones que lee vs. que ignora
+
+**Lee:** `stg_customers`, `stg_employees`, `stg_products`, `stg_categories`, `stg_suppliers`, `stg_shippers`, `stg_orders`, `stg_order_details`.
+
+**No lee (por ahora):** `stg_region`, `stg_territories`, `stg_employee_territories`. Están en staging para completitud pero el modelo estrella actual deriva territorio desde la geografía del cliente.
+
+---
+
+## ETL — `etl_meta.py`
+
+**Para qué sirve:** Auditoría en tabla `etl_runs` (Supabase staging).
+
+| Función | Qué hace |
+|---------|----------|
+| `start_run(engine)` | INSERT con `status='running'`; retorna `(run_id, batch_id)` |
+| `finish_run(engine, run_id, rows_loaded, ...)` | UPDATE a `success` con filas, duración, tablas OK |
+| `fail_run(engine, run_id, error_message, ...)` | UPDATE a `failed` con mensaje de error |
+
+Consulta de verificación:
+
+```sql
+SELECT run_id, started_at, finished_at, status, duration_sec, rows_loaded
+FROM etl_runs
+ORDER BY started_at DESC
+LIMIT 5;
+```
+
+---
+
+## ETL — `logger_setup.py`
+
+**Para qué sirve:** Configura logs en consola y archivo.
+
+| Función | Qué hace |
+|---------|----------|
+| `setup_logger(log_dir, level)` | Crea carpeta `logs/`, archivo `etl_run_YYYYMMDD_HHMMSS.log` rotativo (5 MB × 3 backups), formato con timestamp + nivel + módulo |
+
+---
+
+## ETL — Scripts SQL
+
+| Archivo | Cuándo ejecutarlo | Contenido |
+|---------|-------------------|-----------|
+| `sql/northwind_oltp_supabase.sql` | **Manual, una vez** en SQL Editor de `northwind-oltp` | 11 tablas OLTP + datos + FK |
+| `sql/northwind_staging_supabase.sql` | **Automático** vía `bootstrap.py` en primera ejecución | 11 tablas `stg_*` + `etl_runs` + índices |
+
+---
+
+## ETL — Ejecución y automatización
+
+### Setup inicial (una vez)
+
+1. Crear proyectos Supabase `northwind-oltp` y `northwind-staging`.
+2. Ejecutar `northwind_oltp_supabase.sql` en OLTP.
+3. Copiar `.env.example` → `.env` en la raíz y completar URLs.
+4. `pip install -r requirements.txt`
+
+### Ejecución manual
+
+```bash
+cd etl/
+pip install -r requirements.txt
+python pipeline.py --dry-run      # prueba sin escribir
+python pipeline.py                # ciclo completo OLTP → staging → MongoDB
+python pipeline.py --skip-dw      # solo Fase A
+```
+
+### Verificación post-run
+
+**Staging (Supabase SQL Editor):**
+
+```sql
+SELECT 'stg_orders' AS t, COUNT(*) FROM stg_orders
+UNION ALL SELECT 'stg_order_details', COUNT(*) FROM stg_order_details;
+```
+
+**MongoDB Atlas:** ~2,155 docs en `fact_ventas`, ~91 en `dim_cliente`.
+
+**Task Scheduler:** ver sección [Programación del ETL](#programación-del-etl-en-tu-pc-task-scheduler).
+
+### Dependencias Python
+
+Archivo [`etl/requirements.txt`](etl/requirements.txt):
+
+| Paquete | Rol en el ETL |
+|---------|---------------|
+| `sqlalchemy` | Engines PostgreSQL, `text()`, `to_sql` |
+| `pandas` | DataFrames en memoria (extract, transform, load) |
+| `psycopg2-binary` | Driver PostgreSQL para Supabase |
+| `numpy` | Cálculos vectorizados en transform |
+| `python-dotenv` | Carga `.env` |
+| `pymongo` | Cliente MongoDB Atlas (Fase B) |
+| `openpyxl` | Export opcional (no usado en pipeline principal) |
+
+---
+
+## ETL — Métricas verificadas (último run)
+
+Resultados de una ejecución exitosa en entorno cloud (junio 2026):
+
+| Etapa | Métrica | Valor |
+|-------|---------|-------|
+| Extract | Tablas OK | 11/11 |
+| Extract | Errores | 0 |
+| Staging | Registros totales | 3.308 |
+| Staging | `stg_orders` | 830 |
+| Staging | `stg_order_details` | 2.155 |
+| DW | Documentos totales | 3.184 |
+| DW | `fact_ventas` | 2.155 |
+| DW | `dim_fecha` | 672 |
+| DW | `dim_cliente` | 91 |
+| DW | `dim_metas_empleado` | 108 |
+| Auditoría | `etl_runs.status` | `success` |
+| Performance | Duración | ~72 s |
+
+### Consultas de verificación post-run
+
+**Staging (SQL Editor de `northwind-staging`):**
+
+```sql
+-- Conteos por tabla
+SELECT 'stg_orders' AS tabla, COUNT(*) FROM stg_orders
+UNION ALL SELECT 'stg_order_details', COUNT(*) FROM stg_order_details
+UNION ALL SELECT 'stg_customers', COUNT(*) FROM stg_customers;
+
+-- Últimas ejecuciones auditadas
+SELECT run_id, started_at, finished_at, status, duration_sec, batch_id
+FROM etl_runs
+ORDER BY started_at DESC
+LIMIT 5;
+
+-- Detalle de la última ejecución exitosa
+SELECT run_id, rows_loaded, tables_ok, error_message
+FROM etl_runs
+WHERE status = 'success'
+ORDER BY started_at DESC
+LIMIT 1;
+```
+
+**MongoDB Atlas (mongosh o script Python):**
+
+```python
+from pymongo import MongoClient
+import os
+from dotenv import load_dotenv
+load_dotenv("../.env")
+
+client = MongoClient(os.environ["MONGO_URI"])
+db = client[os.environ.get("MONGO_DB", "northwind_dw")]
+
+for col in sorted(db.list_collection_names()):
+    print(f"{col}: {db[col].count_documents({}):,}")
+
+# Sanity check: suma de ventas
+total = sum(d["total_venta"] for d in db.fact_ventas.find({}, {"total_venta": 1}))
+print(f"Total ventas USD: ${total:,.2f}")
+```
+
+**Diagnóstico rápido local:**
+
+```bash
+cd etl/
+python _check_env.py    # prueba las 3 conexiones sin cargar datos
+```
+
+---
+
+## ETL — Cómo explicarlo en la sustentación
+
+Guión estructurado para responder preguntas del jurado con vocabulario profesional.
+
+### Pregunta: "¿Qué hace su ETL?"
+
+> Implementamos un pipeline **batch** en Python que ejecuta un **full refresh** en dos fases. En la Fase A extraemos 11 tablas del OLTP en Supabase, aplicamos reglas de limpieza y enriquecimiento con pandas, validamos calidad, y cargamos el resultado en una zona staging en un segundo proyecto Supabase. En la Fase B leemos ese staging, conformamos un **modelo dimensional estrella** con siete dimensiones y una tabla de hechos, y lo materializamos en MongoDB Atlas como documentos JSON. Cada ejecución queda auditada en `etl_runs` con duración, conteos y estado.
+
+### Pregunta: "¿Por qué staging si ya tienen MongoDB?"
+
+> El staging cumple tres funciones: (1) **desacoplar** la fuente del destino — si falla MongoDB, los datos limpios ya están persistidos; (2) **trazabilidad** — podemos inspeccionar `STG_ValorNeto` y `STG_DiasEntrega` en SQL antes de modelar; (3) **reproducibilidad** — la Fase B puede re-ejecutarse leyendo staging sin volver a tocar el OLTP.
+
+### Pregunta: "¿Por qué full refresh y no incremental?"
+
+> Northwind tiene ~3.300 registros en staging — el full refresh tarda menos de 90 segundos y garantiza **idempotencia**: cada run deja el sistema en un estado conocido sin riesgo de duplicados ni registros huérfanos. Para un dataset estático académico es la estrategia correcta. Dejamos incremental (`watermark`) documentado como mejora futura.
+
+### Pregunta: "¿Dónde ocurren las transformaciones de negocio?"
+
+> En **dos puntos deliberados**: (1) Fase A en `transform.py` — limpieza, tipos, métricas operativas (`STG_ValorNeto`, días de entrega); (2) Fase B en `load_dw.py` — conformación dimensional (segmentación de clientes, calendario, metas de empleado, margen). Separamos *datos limpios* (staging) de *datos analíticos* (DW).
+
+### Pregunta: "¿Cómo garantizan calidad de datos?"
+
+> Tres capas: (1) reglas TR-xxx en transform (corrección activa, ej. descuentos fuera de rango → 0); (2) reglas RQ-xxx en validate (detección con logging); (3) constraints en DDL staging (PKs, tipos `NUMERIC`). Además, `etl_runs` registra cada ejecución para auditoría operativa.
+
+### Pregunta: "¿Qué pasa si falla a mitad del pipeline?"
+
+> El `try/except` de `pipeline.py` captura la excepción, llama a `etl_meta.fail_run()` con el mensaje de error, y termina con exit code 1. Si falla en Fase B, staging ya tiene los datos de esa ejecución. Si falla en Fase A, MongoDB conserva los datos del último run exitoso (no se hace drop hasta que Fase B empieza).
+
+### Diagrama mental para la pizarra
+
+```
+[OLTP Supabase] --read--> [Python/pandas] --write--> [Staging Supabase]
+                              |
+                              +--- validate, log, audit (etl_runs)
+                              |
+[Staging Supabase] --read--> [Python/load_dw] --write--> [MongoDB Atlas] --> [Power BI]
+```
+
+---
+
+## ETL — Solución de problemas
+
+| Error | Causa probable | Solución |
+|-------|----------------|----------|
+| `SOURCE_DATABASE_URL no configurada` | Falta `.env` en raíz del repo | Copiar `.env.example` → `.env` y completar |
+| `DATABASE_URL vacía` | Variable vacía o mal nombrada | Verificar nombres exactos en `.env` |
+| `relation "Customers" does not exist` | OLTP sin DDL o tablas en minúsculas | Ejecutar `northwind_oltp_supabase.sql` en Supabase OLTP |
+| `relation "customers" does not exist` | Queries sin comillas en PostgreSQL | El ETL usa `"Customers"` con comillas — no modificar |
+| `stg_customers vacía` | Fase A no corrió o usaste `--dry-run` | Ejecutar `python pipeline.py` sin flags |
+| Error pymongo / `ServerSelectionTimeout` | IP no en whitelist Atlas | Network Access → Add Current IP |
+| `cannot convert float NaN to integer` | NULL de SQL leído como `NaN` por pandas | Corregido con `_safe_int()` en `load_dw.py` |
+| `pd.NA` / type mismatch en enteros | Bug histórico SQL Server | Corregido con `pd.Int32Dtype()` en `transform_orders` |
+| `column "X" does not exist` | Desajuste DDL staging vs DataFrame | Re-aplicar `northwind_staging_supabase.sql` |
+| Bootstrap no crea tablas | `stg_orders` ya existe de un run parcial | Borrar tablas manualmente o verificar DDL |
+| Pipeline lento (>5 min) | Red o pooler incorrecto | Usar Session pooler `:5432`, no Transaction `:6543` |
+| `Modo --only-extract: pipeline detenido` | No es error — es el flag | Quitar `--only-extract` para run completo |
+
+### Árbol de decisión para depurar
+
+```
+¿Falla en [1/6] CONEXIONES?
+  → Revisar .env, credenciales Supabase, IP en Atlas
+
+¿Falla en [3/6] EXTRACCIÓN?
+  → ¿OLTP tiene las 11 tablas? → ejecutar northwind_oltp_supabase.sql
+
+¿Falla en [5/6] CARGA STAGING?
+  → ¿Existe DDL staging? → bootstrap o SQL manual
+  → Revisar tipos de columnas STG_DiasEntrega (Int32)
+
+¿Falla en [6/6] CARGA DW?
+  → ¿Staging tiene datos? → SELECT COUNT(*) FROM stg_order_details
+  → ¿MongoDB accesible? → python _check_env.py
+  → Revisar _safe_int para campos nullable
+```
+
+---
+
+## Modelo dimensional (esquema estrella)
+
+```
+                    dim_fecha
+                        │
+                    dim_cliente
+                        │
+dim_metas_empleado ─► dim_empleado
+                        │
+                    dim_producto
+                        │
+                    dim_shipper
+                        │
+                    dim_territorio
+                        │
+                 ┌──────▼ fact_ventas ──────┐
+                 │  order_detail_id (PK)    │
+                 │  FKs → dimensiones       │
+                 │  cantidad, total_venta   │
+                 │  margen, dias_entrega    │
+                 └──────────────────────────┘
+```
+
+### Supuesto de costo (documentado)
+
+```
+costo_adquisicion = UnitPrice × 0.60
+margen            = total_venta − costo_total
+```
+
+### dim_metas_empleado (auxiliar — P5)
+
+| Cargo | Meta trimestral |
+|-------|-----------------|
 | Vice President, Sales | $18,000 |
 | Sales Manager | $15,000 |
 | Sales Representative | $12,000 |
 
 ---
 
-## 7. Fase 2 — ETL Python
-
-### Tablas extraídas (11 tablas)
-
-```
-Categories → STG_CATEGORIES
-Suppliers  → STG_SUPPLIERS
-Shippers   → STG_SHIPPERS
-Customers  → STG_CUSTOMERS
-Employees  → STG_EMPLOYEES
-Region              → STG_REGION              ← análisis territorial (P6)
-Territories         → STG_TERRITORIES
-EmployeeTerritories → STG_EMPLOYEE_TERRITORIES
-Products   → STG_PRODUCTS
-Orders     → STG_ORDERS
-Order Details → STG_ORDER_DETAILS
-```
-
-### Transformaciones aplicadas (TR-001 a TR-014)
-
-| ID | Transformación | Campo/Tabla |
-|---|---|---|
-| TR-001 | Normalización texto (UPPER + TRIM) | Todos los campos de texto |
-| TR-002 | MONEY → DECIMAL(18,2) | UnitPrice, Freight |
-| TR-003 | DATETIME → DATE (solo fecha) | OrderDate, ShippedDate, HireDate |
-| TR-004 | BIT → int | Products.Discontinued |
-| TR-005 | REAL → DECIMAL(5,2) | Order Details.Discount |
-| TR-006 | Valor neto de venta (columna derivada) | `STG_ValorNeto = UnitPrice × Qty × (1 - Discount)` |
-| TR-007 | Días de entrega (columna derivada) | `STG_DiasEntrega = ShippedDate − OrderDate` |
-| TR-008 | Indicador de puntualidad | `STG_EntregaPuntual = 1 si ShippedDate ≤ RequiredDate` |
-| TR-009 | Alerta bajo reorden | `STG_AlertaBajoReorden = ALERTA/OK` |
-| TR-010 | Stock proyectado | `STG_StockProyectado = UnitsInStock + UnitsOnOrder` |
-| TR-013 | Nombre completo empleado | `FullName = LastName + ", " + FirstName` |
-| TR-014 | Flag Discontinued | Filtro informativo (no elimina) |
-
-### Reglas de calidad (RQ-001 a RQ-022)
-
-- **RQ-001–004**: Integridad referencial (OrderID, ProductID, CustomerID, CategoryID)
-- **RQ-005–007**: Completitud (OrderDate, UnitPrice, Quantity no nulos)
-- **RQ-008**: Discount en rango [0.0, 1.0]
-- **RQ-009–010**: Consistencia temporal (ShippedDate ≥ OrderDate)
-- **RQ-012–014**: Unicidad de PKs
-
-### Ejecución
-
-```bash
-cd ETL_Base_ded_datos/northwind_etl_python/northwind_etl/
-
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Ejecutar pipeline completo
-python pipeline.py
-
-# Modos alternativos
-python pipeline.py --only-extract    # solo extracción (debug)
-python pipeline.py --skip-validate   # sin validaciones
-python pipeline.py --dry-run         # sin carga al staging
-```
-
-### Resultado esperado
-
-```
-[1/4] CONEXIONES     ✅ Northwind + Staging
-[2/4] EXTRACCIÓN     ✅ 11/11 tablas
-[3/4] TRANSFORMACIÓN ✅ 11 tablas procesadas
-[3b] VALIDACIÓN      ✅ 0 problemas detectados
-[4/4] CARGA          ✅ ~3,600 registros totales al staging
-```
-
-### Bug crítico corregido — Type mismatch pd.NA
-
-**Problema:** `transform.py` inicializaba `STG_DiasEntrega` y `STG_EntregaPuntual` con `pd.NA`, que mezclado con `numpy.int64` generaba `dtype=object`. SQL Server rechazaba el INSERT en columnas `INT/BIT`.
-
-**Corrección:**
-```python
-# ANTES (incorrecto):
-out["STG_DiasEntrega"] = pd.NA
-
-# DESPUÉS (correcto):
-out["STG_DiasEntrega"] = None
-out.loc[mask, "STG_DiasEntrega"] = (ShippedDate - OrderDate).dt.days
-out["STG_DiasEntrega"] = out["STG_DiasEntrega"].astype(pd.Int32Dtype())
-```
-
----
-
-## 8. Fase 3 — Data Warehouse MongoDB
-
-### Colecciones del DW
+## Colecciones MongoDB
 
 | Colección | Documentos | Descripción |
-|---|---|---|
-| `fact_ventas` | ~2,155 | Tabla de hechos — granularidad: línea de pedido |
-| `dim_fecha` | ~672 | Calendario diario Jul 1996 → May 1998 |
-| `dim_cliente` | 91 | Clientes + segmentación Premium/Regular/Inactivo/Nuevo |
-| `dim_empleado` | 9 | Empleados de Northwind |
-| `dim_producto` | 77 | Catálogo con costo estimado (60% del precio) |
-| `dim_shipper` | 3 | Transportistas + promedio de días de entrega |
-| `dim_territorio` | ~69 | País × Ciudad + zona geográfica |
-| `dim_metas_empleado` | 108 | Metas trimestrales por cargo (auxiliar) |
+|-----------|------------|-------------|
+| `fact_ventas` | ~2,155 | Granularidad: línea de pedido |
+| `dim_fecha` | ~672 | Calendario jul 1996 — may 1998 |
+| `dim_cliente` | 91 | Con segmentación |
+| `dim_empleado` | 9 | |
+| `dim_producto` | 77 | |
+| `dim_shipper` | 3 | |
+| `dim_territorio` | ~69 | País × ciudad + zona |
+| `dim_metas_empleado` | 108 | Metas trimestrales |
 
-### Ejecución
-
-```bash
-# Prerrequisito: MongoDB corriendo en localhost:27017
-pip install pymongo pyodbc pandas
-
-# Cargar DW desde staging (requiere ETL ejecutado antes)
-cd "entreega preeparada/entreega preeparada/"
-python northwind_sql_to_mongodb.py
-
-# Verificar en MongoDB Compass: mongodb://localhost:27017
-```
-
-### Índices principales
-
-- `fact_ventas`: índice único en `order_detail_id`, índices en todas las FKs
-- `dim_fecha`: índice único en `fecha_id`, índice compuesto `(anio, mes)`
-- `dim_metas_empleado`: índice único compuesto `(empleado_id, anio, trimestre)`
-
-### Bugs críticos corregidos
-
-1. **Bypass del Staging con regex:** el script original leía `northwind.sql` con regex en lugar del staging — corregido para usar `pyodbc` sobre `northwind_staging`.
-2. **Datos sintéticos con `random()`:** `generar_orders()` inventaba 830 órdenes — eliminado, ahora lee `STG_ORDERS` real.
-3. **Segmentación por Freight:** usaba el flete en lugar de ventas reales para clasificar clientes — corregido para usar `STG_ValorNeto`.
+Índices principales los crea el script de carga (`order_detail_id` único, FKs indexadas).
 
 ---
 
-## 9. Fase 4 — Power BI (TMDL/PBIR)
+## Medidas DAX
 
-### Formato del proyecto
+Tabla `_Medidas` — 30 medidas organizadas por P1–P10. Ejemplos:
 
-El proyecto está guardado como **Power BI Project (PBIP)** con:
-- **SemanticModel en TMDL** (Tabular Model Definition Language) — `model.tmdl`
-- **Report en PBIR** (Power BI Enhanced Report Format) — `definition/pages/`
-
-Esto permite control de versiones con Git, edición de texto plano y colaboración.
-
-### Tema visual
-
-Se aplica el tema **BIBB.PRO v2.05** con paleta corporativa:
-- Colores primarios: `#093824` (verde oscuro), `#001f54` (navy), `#4c956c` (verde)
-- Fuente global: Arial
-- Fondo de página: `#F1F3F6`
-
-### Páginas del reporte
-
-| Página | GUID | Preguntas |
-|---|---|---|
-| **Resumen Ejecutivo** | `e3e43335c708953e4407` | P1 + P10 |
-| **Análisis de Clientes y Geografía** | `d72257249741148631d0` | P2 + P6 + P9 |
-| **Operaciones y Logística** | `d9ff3d19e960c247b7bd` | P3 + P4 + P7 |
-| **Desempeño y Auditoría** | `ad7a10cd5c1f2cdd218f` | P5 + P8 |
-
-### Cómo abrir el proyecto
-
-```
-1. Abrir Power BI Desktop (May 2026 o superior)
-2. File > Open > Browse > seleccionar proyecto-bi/northwind_bi.pbip
-3. Si hay aviso de actualización de datos → Actualizar ahora
-4. El reporte carga con datos del modelo semántico
-```
-
-> **Prerrequisito:** Las queries M del `model.tmdl` apuntan a `(localdb)\MSSQLLocalDB` base de datos `Northwind`, **O** se pueden redirigir a los CSV de la carpeta `csvs/` (ver sección 10).
-
----
-
-## 10. Generación de CSV sin infraestructura
-
-### ¿Para qué sirve?
-
-Si **no tienes** SQL Server, MongoDB, ni el ETL corriendo, el script `generate_csvs.py` genera todos los CSV del DW directamente desde `northwind.sql` usando solo Python.
-
-```bash
-# Desde la raíz del repositorio
-python generate_csvs.py
-```
-
-**Salida:** carpeta `csvs/` con 8 archivos listos para importar en Power BI.
-
-### Verificación de los CSV
-
-```bash
-python verify_csvs.py
-```
-
-**Resultado esperado:**
-```
-RESULTADO FINAL: TODOS LOS CSV SON VALIDOS
-
-Métricas verificadas:
-  ✅ 0 errores de integridad referencial (6 relaciones FK)
-  ✅ 0 valores nulos en campos críticos
-  ✅ 0 descuentos fuera del rango [0,1]
-  ⚠️ 11 márgenes negativos (normal — descuentos altos en algunos productos)
-  ℹ️ 73 pedidos sin fecha de envío (histórico: pedidos nunca enviados)
-```
-
-### Métricas de los datos Northwind 1996-1998
-
-| Métrica | Valor |
-|---|---|
-| Total ventas | **$1,265,793** |
-| Total margen | **$396,177** |
-| Margen global | **31.3%** |
-| Órdenes únicas | **830** |
-| Líneas de detalle | **2,155** |
-| Rango temporal | Jul 4, 1996 → May 6, 1998 |
-| Top cliente | QUICK-Stop — $110,277 |
-| Empleados | 9 (6 Sales Rep, 1 Manager, 1 VP, 1 Coordinator) |
-
----
-
-## 11. Modelo Dimensional (Esquema Estrella)
-
-### fact_ventas — Granularidad: 1 fila = 1 línea de pedido
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `order_detail_id` | string PK | `OrderID-ProductID` |
-| `order_id` | int | Número de orden |
-| `fecha_id` | string FK | YYYYMMDD → dim_fecha |
-| `fecha_entrega_id` | string FK | YYYYMMDD → dim_fecha (relación inactiva) |
-| `cliente_id` | string FK | → dim_cliente |
-| `empleado_id` | int FK | → dim_empleado |
-| `producto_id` | int FK | → dim_producto |
-| `shipper_id` | int FK | → dim_shipper |
-| `territorio_id` | string FK | → dim_territorio |
-| `cantidad` | int | Unidades vendidas |
-| `unit_price` | float | Precio facturado (≠ precio catálogo) |
-| `descuento` | float | Descuento en [0,1] |
-| `freight` | float | Costo de flete |
-| `subtotal` | float | `unit_price × cantidad` |
-| `total_venta` | float | `subtotal × (1 - descuento)` |
-| `costo_total` | float | `unit_price × 0.60 × cantidad` |
-| `margen` | float | `total_venta - costo_total` |
-| `margen_pct` | float | `(margen / total_venta) × 100` |
-| `dias_entrega` | int | `ShippedDate - OrderDate` |
-| `entrega_puntual` | bool | `1 si ShippedDate ≤ RequiredDate` |
-
-### Relaciones activas
-
-```
-fact_ventas.fecha_id       → dim_fecha.fecha_id        (Many-to-One)
-fact_ventas.cliente_id     → dim_cliente.cliente_id    (Many-to-One)
-fact_ventas.empleado_id    → dim_empleado.empleado_id  (Many-to-One)
-fact_ventas.producto_id    → dim_producto.producto_id  (Many-to-One)
-fact_ventas.shipper_id     → dim_shipper.shipper_id    (Many-to-One)
-fact_ventas.territorio_id  → dim_territorio.territorio_id (Many-to-One)
-```
-
-### Relación inactiva
-
-```
-fact_ventas.fecha_entrega_id → dim_fecha.fecha_id   (inactiva — se activa con USERELATIONSHIP en DAX)
-```
-
----
-
-## 12. Medidas DAX implementadas
-
-Todas las medidas están en la tabla `_Medidas`, organizadas por pregunta de negocio:
-
-### P1 — Ventas por periodo
 ```dax
 [Total Ventas]         = SUM(fact_ventas[total_venta])
-[Num Ordenes]          = DISTINCTCOUNT(fact_ventas[order_id])
-[Ventas YTD]           = CALCULATE([Total Ventas], DATESYTD(dim_fecha[fecha_completa]))
-[Ventas Año Anterior]  = CALCULATE([Total Ventas], SAMEPERIODLASTYEAR(dim_fecha[fecha_completa]))
-[Variación YoY %]      = DIVIDE([Total Ventas] - [Ventas Año Anterior], [Ventas Año Anterior]) × 100
+[Unidades Vendidas]  = SUM(fact_ventas[cantidad])
+[% Cumplimiento Meta]= DIVIDE([Total Ventas], [Meta Periodo]) * 100
+[Avg Dias Entrega]   = AVERAGEX(FILTER(fact_ventas, NOT ISBLANK([dias_entrega])), fact_ventas[dias_entrega])
+[Es Cliente Inactivo] = IF([Días Sin Comprar] > 365, "Inactivo", "Activo")
 ```
 
-### P2 — Clientes rentables
-```dax
-[Clientes Activos]     = DISTINCTCOUNT(fact_ventas[cliente_id])
-[Ventas por Cliente]   = DIVIDE([Total Ventas], [Clientes Activos])
-[Ranking Cliente]      = RANKX(ALL(dim_cliente[company_name]), [Total Ventas], , DESC, DENSE)
-```
-
-### P3 — Productos más vendidos
-```dax
-[Unidades Vendidas]        = SUM(fact_ventas[cantidad])
-[% Contribución Ventas]    = DIVIDE([Total Ventas], CALCULATE([Total Ventas], ALL(dim_producto))) × 100
-```
-
-### P5 — Eficiencia empleados
-```dax
-[Meta Periodo]         = SUMX(FILTER(dim_metas_empleado, ...), dim_metas_empleado[meta_ventas_usd])
-[% Cumplimiento Meta]  = DIVIDE([Total Ventas], [Meta Periodo]) × 100
-[Ranking Empleado]     = RANKX(ALL(dim_empleado[full_name]), [Total Ventas], , DESC, DENSE)
-```
-
-### P7 — Tiempos de entrega
-```dax
-[Avg Dias Entrega]     = AVERAGEX(FILTER(fact_ventas, NOT ISBLANK([dias_entrega])), fact_ventas[dias_entrega])
-[% Entregas Puntuales] = DIVIDE(COUNTROWS(FILTER(fact_ventas, [entrega_puntual] = TRUE())), [Pedidos Entregados]) × 100
-[Pedidos Entregados]   = COUNTROWS(FILTER(fact_ventas, NOT ISBLANK(fact_ventas[shipped_date])))
-[Pedidos Pendientes]   = COUNTROWS(FILTER(fact_ventas, ISBLANK(fact_ventas[shipped_date])))
-```
-
-### P8 — Margen de rentabilidad
-```dax
-[Total Margen]             = SUM(fact_ventas[margen])
-[Total Costo]              = SUM(fact_ventas[costo_total])
-[% Margen Promedio]        = DIVIDE([Total Margen], [Total Ventas]) × 100
-[Ranking Margen Producto]  = RANKX(ALL(dim_producto[product_name]), [Total Margen], , DESC, DENSE)
-```
-
-### P9 — Clientes inactivos
-```dax
-[Última Compra Cliente] = CALCULATE(MAX(fact_ventas[order_date]), ALLEXCEPT(dim_cliente, dim_cliente[cliente_id]))
-[Días Sin Comprar]      = DATEDIFF([Última Compra Cliente], MAX(fact_ventas[order_date]), DAY)
-[Es Cliente Inactivo]   = IF([Días Sin Comprar] > 365, "Inactivo", "Activo")
-```
-
-### P10 — Estacionalidad
-```dax
-[Ventas por Trimestre]           = CALCULATE([Total Ventas], ALLEXCEPT(dim_fecha, dim_fecha[anio], dim_fecha[trimestre]))
-[Variación vs Trimestre Anterior] = DIVIDE([Total Ventas] - CALCULATE([Total Ventas], DATEADD(dim_fecha[fecha_completa], -1, QUARTER)), ...) × 100
-[Índice Estacionalidad]           = DIVIDE([Total Ventas], AVERAGEX(ALL(dim_fecha[trimestre]), CALCULATE([Total Ventas])))
-```
+Listado completo en `proyecto-bi/northwind_bi.SemanticModel/definition/model.tmdl`.
 
 ---
 
-## 13. Diseño de las Visualizaciones
+## Diseño de visualizaciones
 
-### Página 1 — Resumen Ejecutivo (P1 + P10)
+4 páginas · canvas 1280×720 · tema BIBB (`#093824`).
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  BANNER: "Northwind BI · Resumen Ejecutivo"    [Año][Trim]  │
-├────────────┬────────────┬────────────┬────────────────────── │
-│ Total       │ Órdenes    │ % Margen   │ Clientes Activos      │
-│ Ventas      │ Únicas     │ Promedio   │                       │
-├────────────┴────────────┴────────────┴──────────────────────┤
-│  P1 → Gráfico de Líneas: "Evolución Ventas Mensuales"        │
-│       Eje X: nombre_mes | Eje Y: Total Ventas                │
-│       Leyenda: año (3 líneas: 1996, 1997, 1998)              │
-├────────────────────────────┬────────────────────────────────┤
-│ P10 → Matrix (mapa calor)  │ P10 → Barras Agrupadas          │
-│ "Ventas por Trim × Año"    │ "Ventas Trimestrales"           │
-│ Filas: Trimestre 1-4       │ Eje X: nombre_mes               │
-│ Cols: anio                 │ Eje Y: Total Ventas             │
-└────────────────────────────┴────────────────────────────────┘
-```
+| Página | Preguntas | Contenido principal |
+|--------|-----------|---------------------|
+| Resumen Ejecutivo | P1, P10 | KPIs, línea mensual, matrix calor, barras trimestrales |
+| Clientes y Geografía | P2, P6, P9 | Top 10, mapa, tablas, línea comportamiento |
+| Operaciones y Logística | P3, P4, P7 | Top productos, donut, área, gauge, logística |
+| Desempeño y Auditoría | P5, P8 | Barras vs meta, scatter, tablas |
 
-### Página 2 — Clientes y Geografía (P2 + P6 + P9)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  BANNER: "Clientes y Territorios"   [País][Segmento][Año]   │
-├─────────────────────────┬────────────────────────────────── │
-│ P2 → Barras Horiz.      │ P6 → Mapa Coroplético             │
-│ "Top 10 Clientes"       │ "Ingresos por País"               │
-│ Color: segmento_cliente │ Tamaño/Color: Total Ventas        │
-├─────────────────────────┼────────────────────────────────── │
-│ P2 → Tabla Detallada    │ P6 → Barras: Ventas por Zona      │
-│ Cliente│Ventas│Segmento │                                   │
-├─────────────────────────┴────────────────────────────────── │
-│ P9 → Tabla: "Clientes con Actividad en Declive"              │
-│ Cliente │ Última Compra │ Días Sin Comprar │ Ventas Hist.    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Página 3 — Operaciones y Logística (P3 + P4 + P7)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  BANNER: "Productos y Logística"        [Categoría][Año]    │
-├─────────────────────────┬────────────────────────────────── │
-│ P3 → Barras Horiz.      │ P4 → Donut                        │
-│ "Top 10 Productos"      │ "Ingresos por Categoría"          │
-│ Eje Y: product_name     │ Etiquetas: nombre + %             │
-├─────────────────────────┴────────────────────────────────── │
-│ P4 → Área Apilada: "Tendencia Histórica por Categoría"       │
-├─────────────────────────┬────────────────────────────────── │
-│ P7 → KPI Cards          │ P7 → Barras Horiz.                │
-│ Avg Días / % Puntuales  │ "Días Entrega por Transportista"  │
-└─────────────────────────┴────────────────────────────────── │
-```
-
-### Página 4 — Desempeño y Auditoría (P5 + P8)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  BANNER: "Desempeño y Rentabilidad"    [Empleado][Año][Trim]│
-├─────────────────────────┬────────────────────────────────── │
-│ P5 → Barras Agrupadas   │ P8 → Dispersión (Scatter)         │
-│ Ventas Reales vs Meta   │ Eje X: Total Ventas               │
-│ Color: full_name        │ Eje Y: % Margen                   │
-│                         │ Tamaño: Unidades Vendidas         │
-├─────────────────────────┼────────────────────────────────── │
-│ P5 → Tabla              │ P8 → Tabla                        │
-│ Empleado│Ventas│%Cumpl  │ Producto│Ventas│Margen│%Margen    │
-└─────────────────────────┴────────────────────────────────── │
-```
+Wireframes detallados en sección original del README (§13 histórico) — ver commits anteriores si se necesita el ASCII art completo por página.
 
 ---
 
-## 14. Errores Corregidos (Auditoría)
+## Proyecto PBIP / TMDL / PBIR
 
-Durante el desarrollo se realizó una auditoría técnica completa. Los hallazgos y correcciones se documentan en `Reporte_Errores_Corregidos.docx`.
+```
+proyecto-bi/
+├── northwind_bi.pbip
+├── northwind_bi.SemanticModel/   ← TMDL, compatibilityLevel 1600
+└── northwind_bi.Report/          ← PBIR, 4 páginas
+```
 
-### Resumen de correcciones
+### Abrir en Power BI Desktop
 
-| ID | Fase | Severidad | Error | Corrección |
-|---|---|---|---|---|
-| F2-01 | ETL Python | **CRÍTICO** | `pd.NA` type mismatch en `STG_DiasEntrega` → INSERT fallaba | `None` + `pd.Int32Dtype()` |
-| F2-02 | ETL Python | **CRÍTICO** | Tablas territoriales (Region, Territories, EmployeeTerritories) no extraídas | Añadidas a `SOURCE_TABLES` y `TABLE_MAP` |
-| F2-03 | ETL Python | MENOR | `DELETE FROM` en lugar de `TRUNCATE TABLE` | Reemplazado por `TRUNCATE TABLE` (O(1)) |
-| F3-01 | MongoDB | **CRÍTICO** | Script leía `northwind.sql` con regex en lugar del staging | Reemplazado por `read_staging()` con `pyodbc` |
-| F3-02 | MongoDB | **CRÍTICO** | Función `generar_orders()` con `random()` creaba datos falsos | Eliminada — lee `STG_ORDERS` real |
-| F3-03 | MongoDB | MEDIO | Segmentación de clientes usaba `Freight` en lugar de ventas reales | Usa `STG_ValorNeto` con cruce de details |
-| F3-04 | MongoDB | MEDIO | `dim_metas_empleado` no existía | Nueva función `build_dim_metas_empleado()` |
-| F4-01 | TMDL | SINTAXIS | `ref cultureInfo` indentado dentro del bloque `model` | Movido al nivel top-level |
-| F4-02 | TMDL | SINTAXIS | `annotation:` con dos puntos (sintaxis YAML incorrecta) | Eliminado, reemplazado por comentario `///` |
-| F4-03 | TMDL | SINTAXIS | Línea vacía entre bloque `///` y declaración | Eliminada |
-| F4-04 | TMDL | SINTAXIS | `fromTable`/`toTable` no existen en TMDL | `fromColumn: tabla.columna` |
-| F4-05 | TMDL | SINTAXIS | `relationship` sin nombre (objeto nombrado obligatorio) | Añadido nombre a cada relación |
-| F4-06 | TMDL | SEMÁNTICO | `sourceColumn: [fecha_id]` con brackets (sintaxis DAX, no TMDL) | `sourceColumn: fecha_id` |
-| F4-07 | TMDL | M Engine | `\MSSQLLocalDB` en string M → secuencia de escape inválida | `\\MSSQLLocalDB` (backslash doble) |
-| F4-08 | TMDL | SEMÁNTICO | Relación desde tabla calculada → column ID inválido | Relación eliminada (la medida usa FILTER explícito) |
+1. File → Open → `proyecto-bi/northwind_bi.pbip`
+2. Actualizar datos (según fuente configurada en `model.tmdl`)
+3. Guardar
+
+> **Import Mode:** tras actualizar, los datos quedan embebidos; la sustentación puede funcionar offline si se refrescó antes.
 
 ---
 
-## 15. Prerrequisitos e Instalación
+## Páginas del reporte
 
-### Opción A — Pipeline completo (ETL + MongoDB)
+| Página | GUID | Preguntas |
+|--------|------|-----------|
+| Resumen Ejecutivo | `e3e43335c708953e4407` | P1 + P10 |
+| Clientes y Geografía | `d72257249741148631d0` | P2 + P6 + P9 |
+| Operaciones y Logística | `d9ff3d19e960c247b7bd` | P3 + P4 + P7 |
+| Desempeño y Auditoría | `ad7a10cd5c1f2cdd218f` | P5 + P8 |
 
-```
-✅ Python 3.9+
-✅ SQL Server LocalDB (viene con Visual Studio)
-✅ MongoDB Community Server 6+
-✅ Power BI Desktop (Mayo 2026+)
-✅ ODBC Driver 17 for SQL Server
-```
+---
+
+## Plan B — CSV sin infraestructura
+
+Si falla la red o los servicios cloud en la sustentación:
 
 ```bash
-# Python
-pip install sqlalchemy pandas pyodbc pymongo numpy openpyxl
-
-# Crear base de datos Northwind en LocalDB
-sqlcmd -S "(localdb)\MSSQLLocalDB" -i ETL_Base_ded_datos/scripteado/northwind.sql
-
-# Crear staging en LocalDB
-sqlcmd -S "(localdb)\MSSQLLocalDB" -i ETL_Base_ded_datos/northwind_etl_python/northwind_etl/sql/create_staging.sql
+cd plan-b/
+python verify_csvs.py     # valida csvs/ existentes
+python generate_csvs.py   # requiere northwind.sql (T-SQL) en plan-b/
 ```
 
-### Opción B — Solo CSV para Power BI (mínimo)
+Conectar Power BI a `plan-b/csvs/*.csv` en lugar de Atlas/Supabase.
+
+**Métricas esperadas:** 2,155 facts · $1,265,793 ventas · 31.3 % margen global.
+
+---
+
+## Estructura del repositorio
 
 ```
-✅ Python 3.9+ (solo librería estándar + csv)
-✅ Power BI Desktop (Mayo 2026+)
-```
-
-```bash
-python generate_csvs.py   # genera csvs/ desde northwind.sql
-python verify_csvs.py     # verifica integridad
-# Luego conectar Power BI a los CSV
+advanced-db-final-project/
+├── Trabajo Final Base de Datos Avanzadas.pdf
+├── .env.example                   # Plantilla credenciales (copiar a .env)
+├── README.md                      # Documentación central (incl. guía ETL)
+├── etl/                           # Pipeline Python (OLTP → staging → DW)
+│   ├── pipeline.py
+│   ├── sql/                       # DDL Supabase
+│   └── etl/                       # Módulos Python del paquete
+├── plan-b/                        # CSV de respaldo para Power BI
+│   ├── csvs/
+│   ├── generate_csvs.py
+│   └── verify_csvs.py
+└── proyecto-bi/                   # Power BI PBIP
 ```
 
 ---
 
-## 16. Guía de Ejecución por Fase
+## Guía de ejecución rápida
 
 ```bash
-# ── FASE 2: ETL Python ───────────────────────────────────────────────
-cd ETL_Base_ded_datos/northwind_etl_python/northwind_etl/
+# 1. Copiar .env.example → .env (raíz del repo) y completar URLs
+# 2. Una vez: ejecutar northwind_oltp_supabase.sql en Supabase OLTP
+# 3. ETL completo (bootstrap staging + Fase A + Fase B)
+cd etl/
+pip install -r requirements.txt
 python pipeline.py
-# Resultado: northwind_staging con 11 tablas pobladas
 
-# ── FASE 3: MongoDB DW ───────────────────────────────────────────────
-cd "entreega preeparada/entreega preeparada/"
-python northwind_sql_to_mongodb.py
-# Resultado: northwind_dw con 8 colecciones (2155 fact_ventas)
-
-# ── OPCIÓN SIN SERVIDORES ────────────────────────────────────────────
-python generate_csvs.py    # desde la raíz del repo
-python verify_csvs.py      # verificar integridad
-
-# ── FASE 4: Power BI ─────────────────────────────────────────────────
-# Abrir proyecto-bi/northwind_bi.pbip en Power BI Desktop
-# Actualizar datos → Import Mode embebe todo en el .pbip
-# Guardar → el reporte funciona sin servidores
+# 4. Abrir proyecto-bi/northwind_bi.pbip y refrescar contra Atlas
 ```
+
+Ver detalle en [ETL — Ejecución y automatización](#etl--ejecución-y-automatización).
 
 ---
 
-## 17. Independencia entre Fases
+## Errores corregidos (auditoría)
 
-Una pregunta frecuente: **¿necesito que todos los servicios estén corriendo?**
+| ID | Fase | Severidad | Corrección |
+|----|------|-----------|------------|
+| F2-01 | ETL | CRÍTICO | `pd.NA` → `pd.Int32Dtype()` en días de entrega |
+| F2-03 | ETL | CRÍTICO | `_safe_int()` para `NaN` de pandas en Fase B (`load_dw.py`) |
+| F2-02 | ETL | CRÍTICO | Tablas territoriales añadidas al extract |
+| F3-01 | MongoDB | CRÍTICO | Lee staging real, no regex sobre `.sql` |
+| F3-02 | MongoDB | CRÍTICO | Eliminados datos sintéticos con `random()` |
+| F4-01–08 | TMDL | SINTAXIS | Correcciones de formato TMDL y relaciones |
 
-```
-ETL Python  ─────── Corre UNA VEZ ──────► datos en Staging
-                                                │
-MongoDB     ─────── Corre UNA VEZ ──────► datos en northwind_dw
-                                                │
-Power BI    ─────── Import UNA VEZ ─────► datos en .pbip
-                                                │
-Sustentación ───────────────────────────► Solo abrir .pbip
-                                          (sin servidores)
-```
-
-> **Para la sustentación:** con Import Mode activo, el archivo `.pbip` tiene los datos embebidos. Solo necesitas abrir Power BI Desktop con el archivo. No se necesita ningún servidor corriendo.
+Detalle en `Reporte_Errores_Corregidos.docx`.
 
 ---
 
-## 18. Punto Extra — Tabular SSAS
+## Punto extra — Tabular SSAS
 
-El proyecto implementa el **modelo semántico con Tabular SSAS** mencionado en la actividad como punto extra.
+El `northwind_bi.SemanticModel/` es un modelo **Tabular AS** en TMDL (`compatibilityLevel: 1600`). Power BI Desktop usa AS embebido vía `byPath` en `definition.pbir`.
 
-> *"Se reconocerá un punto adicional si los grupos pasan de un modelo dimensional a un modelo semántico con Tabular SASS y el Visualizador se conecta al modelo semántico para realizar los dashboards."*
-
-### Evidencia técnica
-
-El `northwind_bi.SemanticModel/` es un modelo tabular Analysis Services serializado en **TMDL (Tabular Model Definition Language)**:
-
-```tmdl
-# database.tmdl
-database
-    compatibilityLevel: 1600    ← Analysis Services Tabular
-
-# model.tmdl
-model Model
-    culture: es-CO
-    defaultPowerBIDataSourceVersion: powerBI_V3
-    ...
-    table fact_ventas   ← tabla de hechos
-    table dim_fecha     ← dimensión calculada (DAX CALENDAR)
-    table dim_cliente   ← dimensión M (Power Query)
-    ...
-    measure 'Total Ventas' = SUM(fact_ventas[total_venta])
-    ...
-    relationship 'fv_fecha'
-        fromColumn: fact_ventas.fecha_id
-        toColumn:   dim_fecha.fecha_id
-```
-
-**TMDL** es el lenguaje oficial del **Tabular Object Model (TOM)** de Analysis Services. Power BI Desktop se conecta al modelo a través de su instancia interna de Analysis Services (`byPath` en `definition.pbir`).
-
-Documentación oficial: [learn.microsoft.com/analysis-services/tmdl](https://learn.microsoft.com/en-us/analysis-services/tmdl/tmdl-overview)
+Documentación: [TMDL overview](https://learn.microsoft.com/en-us/analysis-services/tmdl/tmdl-overview)
 
 ---
 
-## 19. Estado del Proyecto
+## Estado del proyecto
 
-### Progreso general
+| Componente | Estado | Notas |
+|------------|--------|-------|
+| Análisis funcional | ✅ | Modelo dimensional + diccionario |
+| ETL unificado (`pipeline.py`) | ✅ | Fase A + B + bootstrap + `etl_runs` — **verificado E2E** |
+| SQL OLTP (`northwind_oltp_supabase.sql`) | ✅ | 11 tablas cargadas en Supabase |
+| SQL Staging (`northwind_staging_supabase.sql`) | ✅ | Bootstrap automático |
+| Supabase OLTP / Staging | ✅ | Conexiones OK; 3.308 registros en staging |
+| MongoDB Atlas | ✅ | 8 colecciones; 3.184 documentos |
+| Documentación ETL (README) | ✅ | Guía de estudio y sustentación |
+| Power BI modelo | ✅ | TMDL + ~30 medidas |
+| Power BI reporte | ✅ | 4 páginas · ~39 visuals |
+| Power BI → Atlas | 🔄 | `model.tmdl` aún apunta a LocalDB |
+| Plan B CSV | ✅ | `generate_csvs.py` validado |
+| Task Scheduler | 📋 | Opcional para demos periódicas |
 
-| Fase | Estado | Notas |
-|---|---|---|
-| **Fase 1 — Análisis Funcional** | ✅ Completa | Modelo dimensional, diccionario, reglas de calidad |
-| **Fase 2 — ETL Python** | ✅ Completa | 11 tablas, 14 transformaciones, bugs corregidos |
-| **Fase 3 — MongoDB DW** | ✅ Completa | 8 colecciones, validación, bugs corregidos |
-| **Fase 4 — Modelo Semántico** | ✅ Completa | TMDL con 8 tablas, 22 medidas, 7 relaciones |
-| **Fase 4 — Páginas vacías** | ✅ Listas | 4 páginas PBIR creadas |
-| **Fase 4 — Visuals** | 🔄 Pendiente | Construcción en Power BI Desktop |
-| **CSV sin infraestructura** | ✅ Validado | `generate_csvs.py` + 0 errores de integridad |
-| **Repositorio Git** | ✅ Publicado | github.com/Raikadier/advanced-db-final-project |
+### Próximos pasos
 
-### Validación de datos (última ejecución)
-
-```
-✅ dim_fecha          :    672 filas  (1996-07-04 → 1998-05-06)
-✅ dim_cliente        :     91 filas  (38 Premium, 50 Regular, 3 Inactivo)
-✅ dim_empleado       :      9 filas  (todos los nombres correctos)
-✅ dim_producto       :     77 filas
-✅ dim_shipper        :      3 filas  (avg entrega: 5.9, 7.8, 6.1 días)
-✅ dim_territorio     :     69 filas  (6 zonas geográficas)
-✅ dim_metas_empleado :    108 filas  (9 × 3 años × 4 trimestres)
-✅ fact_ventas        :  2,155 filas
-
-Integridad referencial: 0 errores en 6 relaciones FK
-Total ventas: $1,265,793 | Margen global: 31.3%
-```
+1. Reconectar `model.tmdl` al DW en MongoDB Atlas (o CSV de `plan-b/`)
+2. Refrescar Power BI y validar medidas DAX contra datos del ETL
+3. Programar Task Scheduler para demostrar ejecuciones periódicas
+4. (Opcional) Implementar carga incremental con `watermark.py`
 
 ---
 
 ## Licencia
 
-MIT — ver archivo [LICENSE](LICENSE)
+MIT — ver [LICENSE](LICENSE)
 
 ---
 
-*Proyecto desarrollado para la asignatura Base de Datos Avanzadas — Universidad Popular del Cesar (UPC), 2026.*
+*Última actualización documental: junio 2026 — documentación ETL ampliada para estudio y sustentación. Este README es el índice central del proyecto; las decisiones nuevas se registran en [Registro de decisiones](#registro-de-decisiones-de-diseño).*

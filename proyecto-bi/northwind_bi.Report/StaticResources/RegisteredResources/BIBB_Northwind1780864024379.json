@@ -1,0 +1,14 @@
+{
+  "name": "BIBB Northwind",
+  "dataColors": [
+    "#093824",
+    "#4c956c",
+    "#001f54",
+    "#04a777",
+    "#92C5DE",
+    "#4393C3"
+  ],
+  "background": "#F1F3F6",
+  "foreground": "#0A2B43",
+  "tableAccent": "#093824"
+}

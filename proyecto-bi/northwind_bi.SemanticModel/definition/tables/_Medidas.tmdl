@@ -1,0 +1,296 @@
+/// ============================================================
+/// TABLA DE MEDIDAS: _Medidas
+/// Todas las medidas DAX agrupadas por pregunta de negocio
+/// ============================================================
+table _Medidas
+	isHidden
+	lineageTag: 65fa35c0-5504-4f3d-ad86-ff72d96fc1d6
+
+	/// P1 — Ventas por periodo
+	measure 'Total Ventas' = SUM(fact_ventas[total_venta])
+		formatString: $#,##0.00
+		displayFolder: P1 Ventas por Periodo
+		lineageTag: 22d79377-9d81-4844-96e7-3bda33ccd0f4
+
+	measure 'Num Ordenes' = DISTINCTCOUNT(fact_ventas[order_id])
+		formatString: #,##0
+		displayFolder: P1 Ventas por Periodo
+		lineageTag: b7814489-e789-4055-9721-cd8b499c539b
+
+	measure 'Ventas YTD' =
+			CALCULATE(
+			    [Total Ventas],
+			    DATESYTD(dim_fecha[fecha_completa])
+			)
+		formatString: $#,##0.00
+		displayFolder: P1 Ventas por Periodo
+		lineageTag: d098aaac-610c-46c8-a8f3-04979e0167d9
+
+	measure 'Ventas Año Anterior' =
+			CALCULATE(
+			    [Total Ventas],
+			    SAMEPERIODLASTYEAR(dim_fecha[fecha_completa])
+			)
+		formatString: $#,##0.00
+		displayFolder: P1 Ventas por Periodo
+		lineageTag: d77410d9-7bb4-4e6f-adbe-1747fc0dffe9
+
+	measure 'Variación YoY %' =
+			VAR VentasActual  = [Total Ventas]
+			VAR VentasAnterior = [Ventas Año Anterior]
+			RETURN
+			    IF(
+			        ISBLANK(VentasAnterior) || VentasAnterior = 0,
+			        BLANK(),
+			        DIVIDE(VentasActual - VentasAnterior, VentasAnterior) * 100
+			    )
+		formatString: 0.00
+		displayFolder: P1 Ventas por Periodo
+		lineageTag: a716e5e3-3ae8-44e6-bb51-c7287aa7eab4
+
+	/// P2 — Clientes rentables
+	measure 'Clientes Activos' = DISTINCTCOUNT(fact_ventas[cliente_id])
+		formatString: #,##0
+		displayFolder: P2 Clientes Rentables
+		lineageTag: a2f4c29c-e63e-4d18-9345-7b058b6a3dae
+
+	measure 'Ventas por Cliente' = DIVIDE([Total Ventas], [Clientes Activos], 0)
+		formatString: $#,##0.00
+		displayFolder: P2 Clientes Rentables
+		lineageTag: 6bcbcd09-cb3c-46e5-8e8d-3736b6cc97ae
+
+	measure 'Ranking Cliente' =
+			RANKX(
+			    ALL(dim_cliente[company_name]),
+			    [Total Ventas],
+			    ,
+			    DESC,
+			    DENSE
+			)
+		formatString: #,##0
+		displayFolder: P2 Clientes Rentables
+		lineageTag: bab6b6a7-1130-4f5f-8615-e24bd2488e71
+
+	/// P3 — Productos más vendidos
+	measure 'Unidades Vendidas' = SUM(fact_ventas[cantidad])
+		formatString: #,##0
+		displayFolder: P3 Productos Vendidos
+		lineageTag: ceb0ac7e-000e-414d-94ee-184d026af90c
+
+	measure '% Contribución Ventas' =
+			DIVIDE(
+			    [Total Ventas],
+			    CALCULATE([Total Ventas], ALL(dim_producto)),
+			    0
+			) * 100
+		formatString: 0.00
+		displayFolder: P3 Productos Vendidos
+		lineageTag: d41dfc03-d1a3-4aa6-ab77-73d26c2fad1d
+
+	/// P4 — Análisis por categorías
+	measure 'Ventas por Categoría' =
+			CALCULATE(
+			    [Total Ventas],
+			    ALLEXCEPT(dim_producto, dim_producto[categoria])
+			)
+		formatString: $#,##0.00
+		displayFolder: P4 Categorías
+		lineageTag: 47747871-aa3b-4396-b089-138dc5dd4fd7
+
+	/// P5 — Eficiencia de empleados
+	measure 'Meta Periodo' =
+			SUMX(
+			    FILTER(
+			        dim_metas_empleado,
+			        dim_metas_empleado[empleado_id] = SELECTEDVALUE(dim_empleado[empleado_id])
+			        && dim_metas_empleado[anio]     = SELECTEDVALUE(dim_fecha[anio])
+			        && dim_metas_empleado[trimestre] = SELECTEDVALUE(dim_fecha[trimestre])
+			    ),
+			    dim_metas_empleado[meta_ventas_usd]
+			)
+		formatString: $#,##0.00
+		displayFolder: P5 Eficiencia Empleados
+		lineageTag: 9d598827-20b3-4730-8d32-4e6770acca54
+
+	measure '% Cumplimiento Meta' = DIVIDE([Total Ventas], [Meta Periodo], 0) * 100
+		formatString: 0.00
+		displayFolder: P5 Eficiencia Empleados
+		lineageTag: 7ed29902-4257-4962-a00c-ee9d56189ba3
+
+	measure 'Ranking Empleado' =
+			RANKX(
+			    ALL(dim_empleado[full_name]),
+			    [Total Ventas],
+			    ,
+			    DESC,
+			    DENSE
+			)
+		formatString: #,##0
+		displayFolder: P5 Eficiencia Empleados
+		lineageTag: d5b44d2a-facf-4df4-a35f-2408a3fe8571
+
+	/// P6 — Análisis de territorios
+	measure 'Ventas por País' =
+			CALCULATE(
+			    [Total Ventas],
+			    ALLEXCEPT(dim_territorio, dim_territorio[country])
+			)
+		formatString: $#,##0.00
+		displayFolder: P6 Territorios
+		lineageTag: d14a9536-e1aa-4926-83aa-dfafaeeaacb9
+
+	measure '% Contribución Territorial' =
+			DIVIDE(
+			    [Total Ventas],
+			    CALCULATE([Total Ventas], ALL(dim_territorio)),
+			    0
+			) * 100
+		formatString: 0.00
+		displayFolder: P6 Territorios
+		lineageTag: d4e26751-c8ff-4b61-942a-33646be1b030
+
+	/// P7 — Tiempos de entrega
+	measure 'Avg Dias Entrega' =
+			AVERAGEX(
+			    FILTER(
+			        fact_ventas,
+			        NOT ISBLANK(fact_ventas[dias_entrega])
+			        && fact_ventas[dias_entrega] >= 0
+			    ),
+			    fact_ventas[dias_entrega]
+			)
+		formatString: 0.0
+		displayFolder: P7 Tiempos Entrega
+		lineageTag: aba489c8-046f-4a13-93ad-7d985e524b8f
+
+	measure 'Pedidos Entregados' =
+			COUNTROWS(
+			    FILTER(fact_ventas, NOT ISBLANK(fact_ventas[shipped_date]))
+			)
+		formatString: #,##0
+		displayFolder: P7 Tiempos Entrega
+		lineageTag: 98b19ac3-5481-421e-bb42-d6b04f34823f
+
+	measure 'Pedidos Pendientes' =
+			COUNTROWS(
+			    FILTER(fact_ventas, ISBLANK(fact_ventas[shipped_date]))
+			)
+		formatString: #,##0
+		displayFolder: P7 Tiempos Entrega
+		lineageTag: 16f21cf4-6de8-4e1a-98be-5a5c273617f3
+
+	measure '% Entregas Puntuales' =
+			VAR Puntuales =
+			    COUNTROWS(
+			        FILTER(
+			            fact_ventas,
+			            fact_ventas[entrega_puntual] = TRUE()
+			        )
+			    )
+			VAR Entregados = [Pedidos Entregados]
+			RETURN
+			    DIVIDE(Puntuales, Entregados, 0) * 100
+		formatString: 0.0
+		displayFolder: P7 Tiempos Entrega
+		lineageTag: 20adfe57-1782-42aa-893a-f39ca765f8dc
+
+	/// P8 — Margen de rentabilidad
+	measure 'Total Margen' = SUM(fact_ventas[margen])
+		formatString: $#,##0.00
+		displayFolder: P8 Margen Rentabilidad
+		lineageTag: 80e2704a-d4e3-47a9-9774-18ea8b3215c8
+
+	measure 'Total Costo' = SUM(fact_ventas[costo_total])
+		formatString: $#,##0.00
+		displayFolder: P8 Margen Rentabilidad
+		lineageTag: 842c0c21-3d2f-4010-b871-30757fd79852
+
+	measure '% Margen Promedio' = DIVIDE([Total Margen], [Total Ventas], 0) * 100
+		formatString: 0.00
+		displayFolder: P8 Margen Rentabilidad
+		lineageTag: 7f0dcaea-9f5d-4805-ad6a-36be7d0cd9da
+
+	measure 'Ranking Margen Producto' =
+			RANKX(
+			    ALL(dim_producto[product_name]),
+			    [Total Margen],
+			    ,
+			    DESC,
+			    DENSE
+			)
+		formatString: #,##0
+		displayFolder: P8 Margen Rentabilidad
+		lineageTag: a8417c42-328e-4056-9559-e2f5355a4376
+
+	/// P9 — Clientes inactivos
+	measure 'Última Compra Cliente' =
+			CALCULATE(
+			    MAX(fact_ventas[order_date]),
+			    ALLEXCEPT(dim_cliente, dim_cliente[cliente_id])
+			)
+		formatString: dd/MM/yyyy
+		displayFolder: P9 Clientes Inactivos
+		lineageTag: 1b18d2d9-41a1-4a30-94cc-4f07dc25067b
+
+	measure 'Días Sin Comprar' =
+			VAR UltimaFecha = [Última Compra Cliente]
+			VAR FechaMax    = CALCULATE(MAX(fact_ventas[order_date]), ALL(fact_ventas))
+			RETURN
+			    IF(
+			        ISBLANK(UltimaFecha),
+			        BLANK(),
+			        DATEDIFF(UltimaFecha, FechaMax, DAY)
+			    )
+		formatString: #,##0
+		displayFolder: P9 Clientes Inactivos
+		lineageTag: ea91820e-01eb-4a86-839c-98168227aa6f
+
+	measure 'Es Cliente Inactivo' = IF([Días Sin Comprar] > 365, "Inactivo", "Activo")
+		displayFolder: P9 Clientes Inactivos
+		lineageTag: a3a0b621-0b0c-4902-9a75-86132a046003
+
+	/// P10 — Estacionalidad
+	measure 'Ventas por Trimestre' =
+			CALCULATE(
+			    [Total Ventas],
+			    ALLEXCEPT(dim_fecha, dim_fecha[anio], dim_fecha[trimestre])
+			)
+		formatString: $#,##0.00
+		displayFolder: P10 Estacionalidad
+		lineageTag: 69d651ed-266b-47e8-a832-a6a982b3976e
+
+	measure 'Variación vs Trimestre Anterior' =
+			VAR VentasActual = [Total Ventas]
+			VAR VentasAnterior =
+			    CALCULATE(
+			        [Total Ventas],
+			        DATEADD(dim_fecha[fecha_completa], -1, QUARTER)
+			    )
+			RETURN
+			    DIVIDE(VentasActual - VentasAnterior, VentasAnterior, BLANK()) * 100
+		formatString: 0.00
+		displayFolder: P10 Estacionalidad
+		lineageTag: 4b54032c-ebfc-4ea5-8827-bdbd0384a6d9
+
+	measure 'Índice Estacionalidad' =
+			VAR VentasTrimestre = [Total Ventas]
+			VAR VentasPromTrimestre =
+			    AVERAGEX(
+			        ALL(dim_fecha[trimestre]),
+			        CALCULATE([Total Ventas])
+			    )
+			RETURN
+			    DIVIDE(VentasTrimestre, VentasPromTrimestre, 0)
+		formatString: 0.00
+		displayFolder: P10 Estacionalidad
+		lineageTag: ebffab40-3e28-4f5c-be2b-d6912f6ffdda
+
+	column placeholder
+		lineageTag: b72d22ed-2a37-4571-a9a0-80caf8cfe291
+		isNameInferred
+		sourceColumn: [placeholder]
+
+	partition _Medidas = calculated
+		mode: import
+		source = ROW("placeholder", "x")
+
