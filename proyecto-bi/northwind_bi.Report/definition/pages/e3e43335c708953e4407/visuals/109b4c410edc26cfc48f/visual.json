@@ -5,7 +5,7 @@
     "x": 0,
     "y": 0,
     "z": 1000,
-    "height": 57.333333333333336,
+    "height": 52,
     "width": 1280,
     "tabOrder": 1000
   },
@@ -120,28 +120,28 @@
             "leftMargin": {
               "expr": {
                 "Literal": {
-                  "Value": "20L"
+                  "Value": "16L"
                 }
               }
             },
             "topMargin": {
               "expr": {
                 "Literal": {
-                  "Value": "20L"
+                  "Value": "8L"
                 }
               }
             },
             "rightMargin": {
               "expr": {
                 "Literal": {
-                  "Value": "20L"
+                  "Value": "16L"
                 }
               }
             },
             "bottomMargin": {
               "expr": {
                 "Literal": {
-                  "Value": "20L"
+                  "Value": "8L"
                 }
               }
             },
@@ -156,6 +156,13 @@
               "expr": {
                 "Literal": {
                   "Value": "18D"
+                }
+              }
+            },
+            "fontFamily": {
+              "expr": {
+                "Literal": {
+                  "Value": "''Segoe UI Semibold', wf_segoe-ui_semibold, helvetica, arial, sans-serif'"
                 }
               }
             }

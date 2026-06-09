@@ -2,35 +2,40 @@
   "name": "Power BI Theme Generator - BIBB.PRO v2.05",
   "$schema": "https://raw.githubusercontent.com/microsoft/powerbi-desktop-samples/main/Report%20Theme%20JSON%20Schema/reportThemeSchema-2.149.json",
   "dataColors": [
-    "#ffffff",
     "#093824",
     "#4c956c",
     "#001f54",
     "#04a777",
     "#92C5DE",
     "#4393C3",
-    "#125CA5"
+    "#125CA5",
+    "#2166AC"
   ],
   "textClasses": {
     "callout": {
       "color": "#0A2B43",
-      "fontFace": "Arial"
+      "fontFace": "Segoe UI",
+      "fontSize": 20
     },
     "header": {
       "color": "#0A2B43",
-      "fontFace": "Arial"
+      "fontFace": "Segoe UI",
+      "fontSize": 11
     },
     "label": {
       "color": "#0A2B43",
-      "fontFace": "Arial"
+      "fontFace": "Segoe UI",
+      "fontSize": 9
     },
     "largeTitle": {
       "color": "#0A2B43",
-      "fontFace": "Arial"
+      "fontFace": "Segoe UI",
+      "fontSize": 20
     },
     "title": {
       "color": "#0A2B43",
-      "fontFace": "Arial"
+      "fontFace": "Segoe UI",
+      "fontSize": 11
     }
   },
   "bad": "#ee1c25",
@@ -103,7 +108,7 @@
           {
             "position": "TopCenter",
             "showTitle": false,
-            "fontSize": 7
+            "fontSize": 9
           }
         ],
         "padding": [
@@ -134,7 +139,7 @@
         ],
         "title": [
           {
-            "fontSize": 12,
+            "fontSize": 11,
             "bold": true
           }
         ],
@@ -142,7 +147,7 @@
           {
             "show": true,
             "bold": true,
-            "fontSize": 7
+            "fontSize": 9
           }
         ],
         "valueAxis": [
@@ -1061,6 +1066,11 @@
           },
           {
             "right": 0
+          }
+        ],
+        "categoryLabels": [
+          {
+            "show": false
           }
         ]
       }

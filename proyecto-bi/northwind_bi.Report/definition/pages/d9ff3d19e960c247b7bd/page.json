@@ -4,5 +4,17 @@
   "displayName": "Operaciones y Logística",
   "displayOption": "FitToPage",
   "height": 720,
-  "width": 1280
+  "width": 1280,
+  "visualInteractions": [
+    {
+      "source": "71af7b00860f79e9dbca",
+      "target": "cf9226d159214866ccf0",
+      "type": "NoFilter"
+    },
+    {
+      "source": "71af7b00860f79e9dbca",
+      "target": "efd96158bc5c252457ec",
+      "type": "NoFilter"
+    }
+  ]
 }

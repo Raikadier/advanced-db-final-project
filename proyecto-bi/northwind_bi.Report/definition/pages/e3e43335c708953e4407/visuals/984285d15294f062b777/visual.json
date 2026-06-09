@@ -3,9 +3,9 @@
   "name": "984285d15294f062b777",
   "position": {
     "x": 1070,
-    "y": 57,
-    "z": 3000,
-    "height": 44,
+    "y": 8,
+    "z": 11000,
+    "height": 38,
     "width": 195,
     "tabOrder": 3000
   },
@@ -71,7 +71,7 @@
             "textSize": {
               "expr": {
                 "Literal": {
-                  "Value": "8D"
+                  "Value": "9D"
                 }
               }
             },
@@ -91,14 +91,14 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "true"
+                  "Value": "false"
                 }
               }
             },
             "textSize": {
               "expr": {
                 "Literal": {
-                  "Value": "8D"
+                  "Value": "10D"
                 }
               }
             },
@@ -127,7 +127,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "8D"
+                  "Value": "9D"
                 }
               }
             },
@@ -135,6 +135,17 @@
               "expr": {
                 "Literal": {
                   "Value": "''Segoe UI', wf_segoe-ui_normal, helvetica, arial, sans-serif'"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#FFFFFF'"
+                    }
+                  }
                 }
               }
             }
@@ -146,7 +157,8 @@
       "groupName": "dim_fecha.trimestre",
       "fieldChanges": true,
       "filterChanges": false
-    }
+    },
+    "drillFilterOtherVisuals": false
   },
   "filterConfig": {
     "filters": [

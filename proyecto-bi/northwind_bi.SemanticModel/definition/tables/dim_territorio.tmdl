@@ -21,6 +21,19 @@ table dim_territorio
 		summarizeBy: none
 		sourceColumn: country
 
+	/// Nombres compatibles con mapas de Power BI (Bing)
+	column pais_mapa =
+			SWITCH(
+			    TRUE(),
+			    dim_territorio[country] = "USA", "United States",
+			    dim_territorio[country] = "UK", "United Kingdom",
+			    dim_territorio[country]
+			)
+		dataType: string
+		lineageTag: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+		dataCategory: Country
+		summarizeBy: none
+
 	column region
 		dataType: string
 		lineageTag: bdf98dff-09a3-4f18-847a-cc9e4faa1dee
