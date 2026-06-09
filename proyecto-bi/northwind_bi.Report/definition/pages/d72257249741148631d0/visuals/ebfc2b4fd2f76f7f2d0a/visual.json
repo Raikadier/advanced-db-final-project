@@ -10,28 +10,28 @@
     "tabOrder": 6000
   },
   "visual": {
-    "visualType": "filledMap",
+    "visualType": "azureMap",
     "query": {
       "queryState": {
-        "Location": {
+        "Series": {
           "projections": [
             {
               "field": {
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "dim_territorio"
+                      "Entity": "dim_pais"
                     }
                   },
-                  "Property": "pais_mapa"
+                  "Property": "zona"
                 }
               },
-              "queryRef": "dim_territorio.pais_mapa",
-              "nativeQueryRef": "pais_mapa"
+              "queryRef": "dim_pais.zona",
+              "nativeQueryRef": "zona"
             }
           ]
         },
-        "Values": {
+        "Size": {
           "projections": [
             {
               "field": {
@@ -48,24 +48,126 @@
               "nativeQueryRef": "Ventas por País"
             }
           ]
+        },
+        "X": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_pais"
+                    }
+                  },
+                  "Property": "longitud"
+                }
+              },
+              "queryRef": "dim_pais.longitud",
+              "nativeQueryRef": "longitud"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_pais"
+                    }
+                  },
+                  "Property": "latitud"
+                }
+              },
+              "queryRef": "dim_pais.latitud",
+              "nativeQueryRef": "latitud"
+            }
+          ]
         }
+      },
+      "sortDefinition": {
+        "isDefaultSort": true
       }
     },
     "objects": {
-      "mapStyles": [
+      "mapControls": [
         {
           "properties": {
-            "mapTheme": {
+            "autoZoom": {
               "expr": {
                 "Literal": {
-                  "Value": "'grayscale'"
+                  "Value": "true"
+                }
+              }
+            },
+            "autoZoomIncludesReferenceLayer": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "defaultStyle": {
+              "expr": {
+                "Literal": {
+                  "Value": "'road'"
+                }
+              }
+            },
+            "showCountryRegionBorders": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "showNavigationControls": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showSelectionControl": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showStylePicker": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "worldWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "zoom": {
+              "expr": {
+                "Literal": {
+                  "Value": "0.26D"
+                }
+              }
+            },
+            "centerLatitude": {
+              "expr": {
+                "Literal": {
+                  "Value": "46.944589097581996D"
                 }
               }
             }
           }
         }
       ],
-      "labels": [
+      "bubbleLayer": [
         {
           "properties": {
             "show": {
@@ -75,10 +177,58 @@
                 }
               }
             },
-            "fontSize": {
+            "minBubbleRadius": {
               "expr": {
                 "Literal": {
-                  "Value": "9D"
+                  "Value": "6L"
+                }
+              }
+            },
+            "bubbleStrokeWidth": {
+              "expr": {
+                "Literal": {
+                  "Value": "1L"
+                }
+              }
+            },
+            "bubbleRadius": {
+              "expr": {
+                "Literal": {
+                  "Value": "6L"
+                }
+              }
+            },
+            "maxRadius": {
+              "expr": {
+                "Literal": {
+                  "Value": "21L"
+                }
+              }
+            },
+            "autoStrokeColor": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "layerPosition": {
+              "expr": {
+                "Literal": {
+                  "Value": "''"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "filledMap": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
                 }
               }
             }
@@ -112,7 +262,24 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "9D"
+                  "Value": "8D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "dataPoint": [
+        {
+          "properties": {
+            "fill": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#4c956c'"
+                    }
+                  }
                 }
               }
             }
@@ -127,7 +294,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Ventas por País (mapa)'"
+                  "Value": "'Ventas por País (mapa de burbujas)'"
                 }
               }
             },

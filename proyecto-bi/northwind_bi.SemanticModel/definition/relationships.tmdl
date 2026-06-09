@@ -41,3 +41,8 @@ relationship metas_empleado
 	fromColumn: dim_metas_empleado.empleado_id
 	toColumn: dim_empleado.empleado_id
 
+relationship territorio_pais
+	crossFilteringBehavior: bothDirections
+	fromColumn: dim_territorio.country
+	toColumn: dim_pais.country
+

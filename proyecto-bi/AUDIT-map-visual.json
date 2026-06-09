@@ -1,0 +1,27 @@
+{
+  "visualType": "scatterChart",
+  "buckets": [
+    "Category",
+    "Size",
+    "X",
+    "Y"
+  ],
+  "locationField": "",
+  "filledMapShow": null,
+  "hasColorGradient": true,
+  "territoryRows": 69,
+  "uniqueCountries": 21,
+  "rowsPerCountrySample": {
+    "United States": 12,
+    "Germany": 11,
+    "France": 9,
+    "Brazil": 4,
+    "Venezuela": 4
+  },
+  "issues": [],
+  "fixesApplied": [
+    "Dispersión geo: X=longitud, Y=latitud, Size=[Ventas por País], gradiente verde",
+    "Fondo gris #E9ECEF; sin dependencia de Azure Maps",
+    "Treemap auxiliar: dim_pais[zona] > [country]"
+  ]
+}

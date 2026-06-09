@@ -1615,6 +1615,12 @@
     },
     "slicer": {
       "*": {
+        "selection": [
+          {
+            "singleSelect": false,
+            "selectAllCheckboxEnabled": true
+          }
+        ],
         "background": [
           {
             "show": false

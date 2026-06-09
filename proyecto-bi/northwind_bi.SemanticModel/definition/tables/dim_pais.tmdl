@@ -1,0 +1,107 @@
+/// País único para mapas (1 fila por país, nombres compatibles con Azure Maps)
+table dim_pais
+	lineageTag: f1a2b3c4-d5e6-7890-abcd-ef1234567891
+
+	column pais_mapa
+		dataType: string
+		lineageTag: 7daea1e4-7803-4976-b369-f2c9fbf7167f
+		dataCategory: Country
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: dim_territorio[pais_mapa]
+
+	column country
+		dataType: string
+		lineageTag: 114bc2a8-e01b-4487-83f0-56e2c7d8baa3
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: dim_territorio[country]
+
+	column zona
+		dataType: string
+		lineageTag: c3d4e5f6-a7b8-9012-cdef-345678901234
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: dim_territorio[zona]
+
+	column continente
+		dataType: string
+		lineageTag: d4e5f6a7-b8c9-0123-def0-456789012345
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: dim_territorio[continente]
+
+	/// Centroide aproximado por país (grados decimales) para mapa de burbujas
+	column latitud =
+			SWITCH(
+			    dim_pais[country],
+			    "USA", 39.83,
+			    "UK", 54.00,
+			    "Germany", 51.17,
+			    "France", 46.60,
+			    "Spain", 40.42,
+			    "Italy", 42.87,
+			    "Portugal", 39.40,
+			    "Sweden", 62.20,
+			    "Norway", 64.58,
+			    "Denmark", 56.26,
+			    "Finland", 64.50,
+			    "Poland", 52.07,
+			    "Austria", 47.52,
+			    "Switzerland", 46.82,
+			    "Belgium", 50.50,
+			    "Ireland", 53.35,
+			    "Mexico", 23.63,
+			    "Canada", 56.13,
+			    "Brazil", -10.78,
+			    "Argentina", -34.61,
+			    "Venezuela", 8.00,
+			    BLANK()
+			)
+		dataType: double
+		lineageTag: e5f6a7b8-c9d0-1234-ef01-567890123456
+		dataCategory: Latitude
+		summarizeBy: none
+
+	column longitud =
+			SWITCH(
+			    dim_pais[country],
+			    "USA", -98.58,
+			    "UK", -2.00,
+			    "Germany", 10.45,
+			    "France", 2.21,
+			    "Spain", -3.70,
+			    "Italy", 12.57,
+			    "Portugal", -8.22,
+			    "Sweden", 17.64,
+			    "Norway", 11.00,
+			    "Denmark", 9.50,
+			    "Finland", 26.00,
+			    "Poland", 19.15,
+			    "Austria", 14.55,
+			    "Switzerland", 8.23,
+			    "Belgium", 4.47,
+			    "Ireland", -7.69,
+			    "Mexico", -102.55,
+			    "Canada", -106.35,
+			    "Brazil", -51.93,
+			    "Argentina", -58.44,
+			    "Venezuela", -66.59,
+			    BLANK()
+			)
+		dataType: double
+		lineageTag: f6a7b8c9-d0e1-2345-f012-678901234567
+		dataCategory: Longitude
+		summarizeBy: none
+
+	partition dim_pais = calculated
+		mode: import
+		source =
+				SUMMARIZE(
+				    dim_territorio,
+				    dim_territorio[pais_mapa],
+				    dim_territorio[country],
+				    dim_territorio[zona],
+				    dim_territorio[continente]
+				)
+

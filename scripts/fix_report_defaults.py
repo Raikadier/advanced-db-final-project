@@ -1,4 +1,4 @@
-"""Limpia slicers (sin selección guardada) y reemplaza Azure Map por mapa relleno."""
+"""Limpia slicers (sin selección guardada) y valida mapa Azure Maps con capa filledMap."""
 from __future__ import annotations
 
 import json
@@ -29,6 +29,10 @@ def slicer_title(data: dict) -> str:
     return ""
 
 
+def lit_bool(value: bool) -> dict:
+    return {"expr": {"Literal": {"Value": "true" if value else "false"}}}
+
+
 def fix_slicer(data: dict) -> list[str]:
     changes: list[str] = []
     visual = data.setdefault("visual", {})
@@ -38,14 +42,25 @@ def fix_slicer(data: dict) -> list[str]:
         del objects["general"]
         changes.append("quitar selección guardada")
 
-    if "selection" in objects:
-        for block in objects["selection"]:
-            props = block.get("properties", {})
-            if "strictSingleSelect" in props:
-                del props["strictSingleSelect"]
-                changes.append("quitar strictSingleSelect")
-        if objects["selection"] and all(not b.get("properties") for b in objects["selection"]):
-            del objects["selection"]
+    selection_blocks = objects.setdefault("selection", [{"properties": {}}])
+    props = selection_blocks[0].setdefault("properties", {})
+
+    if props.pop("strictSingleSelect", None) is not None:
+        changes.append("quitar strictSingleSelect")
+
+    if props.get("singleSelect") != lit_bool(False):
+        props["singleSelect"] = lit_bool(False)
+        changes.append("singleSelect=false")
+
+    if props.get("selectAllCheckboxEnabled") != lit_bool(True):
+        props["selectAllCheckboxEnabled"] = lit_bool(True)
+        changes.append("selectAllCheckboxEnabled=true")
+
+    data_blocks = objects.get("data", [])
+    if data_blocks:
+        data_props = data_blocks[0].setdefault("properties", {})
+        if data_props.pop("isInvertedSelectionMode", None) is not None:
+            changes.append("quitar isInvertedSelectionMode")
 
     if visual.get("drillFilterOtherVisuals") is not False:
         visual["drillFilterOtherVisuals"] = False
@@ -59,62 +74,15 @@ def fix_slicer(data: dict) -> list[str]:
     return changes
 
 
-def fix_filled_map() -> list[str]:
+def fix_azure_map() -> list[str]:
+    """No-op si el mapa ya es azureMap con capa filledMap activa."""
     data = json.loads(MAP_VISUAL.read_text(encoding="utf-8"))
     visual = data["visual"]
-    if visual.get("visualType") == "filledMap":
-        return []
-
-    visual["visualType"] = "filledMap"
-    visual["objects"] = {
-        "mapStyles": [
-            {
-                "properties": {
-                    "mapTheme": {
-                        "expr": {"Literal": {"Value": "'grayscale'"}}
-                    }
-                }
-            }
-        ],
-        "dataPoint": [
-            {
-                "properties": {
-                    "fill": {
-                        "solid": {
-                            "color": {
-                                "expr": {"Literal": {"Value": "'#093824'"}}
-                            }
-                        }
-                    }
-                }
-            }
-        ],
-        "labels": [
-            {
-                "properties": {
-                    "show": {"expr": {"Literal": {"Value": "true"}}},
-                    "fontSize": {"expr": {"Literal": {"Value": "9D"}}},
-                }
-            }
-        ],
-        "legend": [
-            {
-                "properties": {
-                    "show": {"expr": {"Literal": {"Value": "true"}}},
-                    "position": {"expr": {"Literal": {"Value": "'Top'"}}},
-                    "showTitle": {"expr": {"Literal": {"Value": "false"}}},
-                    "fontSize": {"expr": {"Literal": {"Value": "9D"}}},
-                }
-            }
-        ],
-    }
-    visual["visualContainerObjects"]["title"][0]["properties"]["text"] = {
-        "expr": {"Literal": {"Value": "'Ventas por País (mapa)'"}}
-    }
-    visual["drillFilterOtherVisuals"] = True
-
-    MAP_VISUAL.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return ["azureMap a filledMap"]
+    if visual.get("visualType") == "azureMap":
+        filled = visual.get("objects", {}).get("filledMap", [])
+        if filled and filled[0].get("properties", {}).get("show", {}).get("expr", {}).get("Literal", {}).get("Value") == "true":
+            return []
+    return ["mapa: revisar visual.json manualmente (azureMap + filledMap)"]
 
 
 def main() -> None:
@@ -128,7 +96,7 @@ def main() -> None:
             vf.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             summary.append({"file": str(vf.relative_to(REPORT_PAGES.parent.parent)), "title": slicer_title(data), "changes": changes})
 
-    map_changes = fix_filled_map()
+    map_changes = fix_azure_map()
 
     print(f"Slicers corregidos: {len(summary)}")
     for row in summary:

@@ -99,14 +99,20 @@ table _Medidas
 
 	/// P5 — Eficiencia de empleados
 	measure 'Meta Periodo' =
-			SUMX(
-			    FILTER(
-			        dim_metas_empleado,
-			        dim_metas_empleado[empleado_id] = SELECTEDVALUE(dim_empleado[empleado_id])
-			        && dim_metas_empleado[anio]     = SELECTEDVALUE(dim_fecha[anio])
-			        && dim_metas_empleado[trimestre] = SELECTEDVALUE(dim_fecha[trimestre])
+			CALCULATE(
+			    SUM(dim_metas_empleado[meta_ventas_usd]),
+			    TREATAS(
+			        CALCULATETABLE(VALUES(dim_empleado[empleado_id])),
+			        dim_metas_empleado[empleado_id]
 			    ),
-			    dim_metas_empleado[meta_ventas_usd]
+			    TREATAS(
+			        CALCULATETABLE(VALUES(dim_fecha[anio]), ALLSELECTED(dim_fecha)),
+			        dim_metas_empleado[anio]
+			    ),
+			    TREATAS(
+			        CALCULATETABLE(VALUES(dim_fecha[trimestre]), ALLSELECTED(dim_fecha)),
+			        dim_metas_empleado[trimestre]
+			    )
 			)
 		formatString: $#,##0.00
 		displayFolder: P5 Eficiencia Empleados
@@ -131,9 +137,12 @@ table _Medidas
 
 	/// P6 — Análisis de territorios
 	measure 'Ventas por País' =
-			CALCULATE(
-			    [Total Ventas],
-			    ALLEXCEPT(dim_territorio, dim_territorio[country])
+			VAR Country = COALESCE(MAX(dim_pais[country]), MAX(dim_territorio[country]))
+			RETURN
+			IF(
+			    NOT ISBLANK(Country),
+			    CALCULATE([Total Ventas], KEEPFILTERS(dim_territorio[country] = Country)),
+			    CALCULATE([Total Ventas], ALLEXCEPT(dim_territorio, dim_territorio[country]))
 			)
 		formatString: $#,##0.00
 		displayFolder: P6 Territorios
@@ -284,6 +293,21 @@ table _Medidas
 		formatString: 0.00
 		displayFolder: P10 Estacionalidad
 		lineageTag: ebffab40-3e28-4f5c-be2b-d6912f6ffdda
+
+	measure 'Ventas Mapa' =
+			VAR PaisMapa = SELECTEDVALUE(dim_pais[pais_mapa], MAX(dim_pais[pais_mapa]))
+			RETURN
+			IF(
+			    NOT ISBLANK(PaisMapa),
+			    CALCULATE(
+			        [Total Ventas],
+			        TREATAS({PaisMapa}, dim_territorio[pais_mapa])
+			    ),
+			    [Ventas por País]
+			)
+		formatString: $#,##0.00
+		displayFolder: P6 Territorios
+		lineageTag: a2b3c4d5-e6f7-8901-bcde-f23456789012
 
 	column placeholder
 		lineageTag: b72d22ed-2a37-4571-a9a0-80caf8cfe291
